@@ -12,8 +12,6 @@ const socketManager = (server,sessionMiddleware) => {
     }
   });
 
-  
-
   io.use(sharedSession(sessionMiddleware,{
     autoSave: true,
   }));
@@ -29,8 +27,19 @@ const socketManager = (server,sessionMiddleware) => {
     // Listen for a 'join_room' event
     socket.on('join_room', (roomID) => {
       socket.join(roomID);
+      io.to(roomID).emit('request_audio',{})
       console.log(`User ${socket.handshake.session.passport.user} joined room: ${roomID}`);
+
     });
+
+    socket.on("send_audio",(data)=>{
+      console.log('check104',data)
+      io.to(data.roomID).emit("receive_audio",{audio:data.audio,i:data.i})
+    })
+
+    socket.on("client_to_server_play_audio",(data)=>{
+      io.to(data.roomID).emit("server_to_client_play_audio",{})
+    })
 
     socket.on("send_audio_chunk", (data) => {
       // forward chunk to everyone else in the room
@@ -38,19 +47,9 @@ const socketManager = (server,sessionMiddleware) => {
       
     });
 
-    // Handle a 'send_message' event within a room
-    socket.on('send_message', (data) => {
-      // Broadcast the message to all users in the specific room
-      io.to(data.roomID).emit('receive_message', data.message);
-    });
-
-    socket.on('start_recording',()=>{
-      io.to(data.roomID).emit('clear_old_audio');
+    socket.on("send_play_window_to_server",(data)=>{
+      socket.to(data.roomID).emit("send_play_window_to_clients",data)
     })
-
-    socket.on('disconnect', () => {
-      userID ? console.log(`User disconnected: ${userID}`) : console.log(`Unauthorized user disconnected`);
-    });
   });
 
   return io;

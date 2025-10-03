@@ -1,405 +1,324 @@
+import { useRef,useState,useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
-import io from "socket.io-client";
+import io from "socket.io-client"
 
-export default function Room() {
-  const { roomID } = useParams();
-  const [roomResponse, setRoomResponse] = useState(false);
-  const [socket, setSocket] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioChunks, setAudioChunks] = useState([]);
-  const mediaRecorderRef = useRef(null);
-  const canvasRef = useRef(null);
-  const playheadRef = useRef(null);
-  const requestRef = useRef(null);
+export default function Room(){
 
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const dataArrayRef = useRef(null);
-  const sourceNodeRef = useRef(null);
-  const realtimeAnimationRef = useRef(null);
-  const currentAudioRef = useRef(null);
+    const recordbuttonref = useRef(null);
+    const stoprecordingbuttonref = useRef(null);
+    const playrecordingbuttonref = useRef(null);
+    const [audioURL,setAudioURL] = useState(null);
+    const [audio,setAudio] = useState(null);
+    const canvasRef = useRef(null);
+    const [BPM,setBPM] = useState(120);
+    const [mouseDragStart,setMouseDragStart] = useState(null);
+    const [mouseDragEnd,setMouseDragEnd] = useState(null);
+    const [isDragging,setIsDragging] = useState(null);
+    const audioObjectRef = useRef(null);
+    const [socket,setSocket] = useState(null);
+    const { roomID } = useParams();
+    const [roomResponse,setRoomResponse] = useState(null);
+    const [audioChunks,setAudioChunks] = useState([]);
 
-  useEffect(() => {
-    const newSocket = io("http://localhost:3000", { withCredentials: true });
-    setSocket(newSocket);
-    return () => newSocket.disconnect();
-  }, []);
+    const AudioCtx = new AudioContext;
 
-  useEffect(() => {
-    async function verifyRoom() {
-      const response = await fetch("http://localhost:3000/getroom/" + roomID, {
-        credentials: "include",
-        method: "GET",
-      });
-      if (response.ok) {
-        setRoomResponse(true);
-        socket?.emit("join_room", roomID);
-        console.log(`Attempting to join socket room: ${roomID}`);
-      } else {
-        setRoomResponse(false);
-      }
+    useEffect(() => {
+        const newSocket = io("http://localhost:3000", { withCredentials: true });
+        console.log('socket',newSocket);
+        setSocket(newSocket);
+        return () => newSocket.disconnect();
+    }, []);
+
+    useEffect(()=>{
+        if(canvasRef.current){
+            const canvasCtx = canvasRef.current.getContext("2d");
+            const WIDTH = canvasRef.current.width;
+            const HEIGHT = canvasRef.current.height;
+            canvasCtx.clearRect(0,0,WIDTH,HEIGHT);
+            canvasCtx.fillStyle = "rgb(200,200,200)";
+            canvasCtx.fillRect(0,0,WIDTH,HEIGHT);
+            
+            if(audio){
+                const dataArray = audio.getChannelData(0);
+                const bufferLength = dataArray.length;
+                if(mouseDragEnd){
+                    console.log('check',mouseDragStart,mouseDragEnd)
+                    canvasCtx.fillStyle = "rgb(75,75,75)"
+                    canvasCtx.fillRect(mouseDragStart.x,0,mouseDragEnd.x-mouseDragStart.x,HEIGHT)
+                }
+                const drawBeats = () => {
+                    canvasCtx.lineWidth = .25;
+                    canvasCtx.strokeStyle = "rgb(100,100,100)";
+                    canvasCtx.beginPath();
+                    canvasCtx.globalAlpha = 1
+                    canvasCtx.linewidth = 1
+                    const sliceWidth = (WIDTH * 1.0) / bufferLength;
+                    const samplesPerBeat = Math.floor(48000/(BPM/60))
+                    let i=0;
+                    while(i<bufferLength){
+                        i += sliceWidth * samplesPerBeat
+                        canvasCtx.moveTo(i,0)
+                        canvasCtx.lineTo(i,HEIGHT)
+                    }
+                    canvasCtx.stroke()
+                }
+                drawBeats()
+                const drawWaveform = () => {
+                    canvasCtx.lineWidth = 1;
+                    canvasCtx.strokeStyle = "rgb(0,0,0)";
+                    canvasCtx.globalAlpha = 1.0
+                    const sliceWidth = (WIDTH * 1.0) / bufferLength;
+                    let x=0;
+                    canvasCtx.beginPath();
+                    for(let i=0;i<bufferLength;i+=1){
+                        const v = dataArray[i]/1.1;
+                        const y = ((v+1) * HEIGHT)/2;
+                        if(i===0){
+                            canvasCtx.moveTo(x,y);
+                        }else{
+                            canvasCtx.lineTo(x,y);
+                        }
+
+                        x += sliceWidth;
+                        
+                    }
+                    canvasCtx.lineTo(WIDTH,HEIGHT/2);
+                    canvasCtx.stroke();
+                }
+                drawWaveform();
+                
+            }
+        }
+    },[audio,BPM,mouseDragEnd])
+
+
+    useEffect(() => {
+        async function verifyRoom() {
+        const response = await fetch("http://localhost:3000/getroom/" + roomID, {
+            credentials: "include",
+            method: "GET",
+        });
+        if (response.ok) {
+            setRoomResponse(true);
+            socket?.emit("join_room", roomID);
+            console.log(`Attempting to join socket room: ${roomID}`);
+        } else {
+            setRoomResponse(false);
+        }
     }
     verifyRoom();
   }, [socket, roomID]);
 
-  // Utility: prepare canvas for high-DPI and return ctx + CSS dims
-  const prepareCanvas = (canvas) => {
-    const ctx = canvas.getContext("2d");
-    const rect = canvas.getBoundingClientRect();
-    // fallback to attributes if no CSS sizing
-    const cssWidth = rect.width || canvas.width;
-    const cssHeight = rect.height || canvas.height;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(cssWidth * dpr);
-    canvas.height = Math.round(cssHeight * dpr);
-    // map drawing commands to CSS pixels
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    return { ctx, cssWidth, cssHeight };
-  };
+    useEffect(() => {
+        if (audioChunks.length === 0) return;
 
-  // Draw the combined waveform (decoded audio blob -> downsampled envelope -> draw)
-  const drawCombinedWaveform = async (blob) => {
-    if (!canvasRef.current || !audioContextRef.current) return;
-    const { ctx, cssWidth, cssHeight } = prepareCanvas(canvasRef.current);
+        const processAudio = async () => {
+            console.log('effectaudiochunks', audioChunks);
+            const blob = new Blob(audioChunks, { type: "audio/ogg; codecs=opus" });
 
-    ctx.clearRect(0, 0, cssWidth, cssHeight);
+            const audioURLtemp = window.URL.createObjectURL(blob);
+            setAudioURL(audioURLtemp);
 
-    // try to decode; if decode fails (small partial chunk), bail silently
-    try {
-      const arrayBuffer = await blob.arrayBuffer();
-      const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+            const arrayBuffer = await blob.arrayBuffer();
+            const decoded = await AudioCtx.decodeAudioData(arrayBuffer);
+            setAudio(decoded);
 
-      const channelCount = audioBuffer.numberOfChannels;
-      const rawLength = audioBuffer.length;
-      // build mono by averaging channels
-      const mono = new Float32Array(rawLength);
-      for (let ch = 0; ch < channelCount; ch++) {
-        const chData = audioBuffer.getChannelData(ch);
-        for (let i = 0; i < rawLength; i++) mono[i] += chData[i];
-      }
-      if (channelCount > 1) {
-        for (let i = 0; i < rawLength; i++) mono[i] /= channelCount;
-      }
+            const audioObject = new Audio(audioURLtemp);
+            audioObjectRef.current = audioObject;
+        };
 
-      // choose display samples equal to canvas width (1 sample per CSS pixel)
-      const displaySamples = Math.max(1, Math.floor(cssWidth));
-      const blockSize = Math.max(1, Math.floor(rawLength / displaySamples));
-      const filtered = new Float32Array(displaySamples);
+        processAudio();
+    }, [audioChunks]);
 
-      // compute RMS per block (better energy estimate)
-      for (let i = 0; i < displaySamples; i++) {
-        const start = i * blockSize;
-        const end = Math.min(start + blockSize, rawLength);
-        let sumSquares = 0;
-        const actualLen = end - start;
-        for (let j = start; j < end; j++) {
-          const s = mono[j];
-          sumSquares += s * s;
+    useEffect(()=> {
+        socket?.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd,roomID})
+    },[mouseDragEnd?.x])
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        console.log("getUserMedia supported.");
+        navigator.mediaDevices
+            .getUserMedia(
+            // constraints - only audio needed for this app
+            {
+                audio: true,
+            },
+            )
+            // Success callback
+            .then((stream) => {
+                const mediaRecorder = new MediaRecorder(stream);
+                if(recordbuttonref.current && stoprecordingbuttonref.current){
+                    recordbuttonref.current.onclick = () => {
+                        mediaRecorder.start();
+
+                        console.log(mediaRecorder.state);
+                        console.log("recorder started");
+                    };
+                
+                    let chunks = [];
+
+                    mediaRecorder.ondataavailable = (e) => {
+                        chunks.push(e.data);
+                    }
+
+                    stoprecordingbuttonref.current.onclick = () => {
+                        mediaRecorder.stop();
+                        console.log(mediaRecorder.state);
+                        console.log("recorder stopped");
+                    };
+                
+                    mediaRecorder.onstop = async (e) => {
+                        console.log("recorder stopped");
+                        setAudioChunks(chunks);
+                        for(let i=0;i<chunks.length;i++){
+                            socket.emit("send_audio",{audio:chunks[i],roomID,i})
+                        }
+                        const blob = new Blob(chunks, { type: "audio/ogg; codecs=opus" });
+                        chunks = [];
+                        const audioURLtemp = window.URL.createObjectURL(blob);
+                        console.log(blob)
+                        setAudioURL(audioURLtemp);
+                        const arrayBuffer = await blob.arrayBuffer()
+                        const decoded = await AudioCtx.decodeAudioData(arrayBuffer)
+                        console.log(typeof decoded,decoded)
+                        console.log('typeof',decoded)
+                        setAudio(decoded);
+                        const audioObject = new Audio(audioURLtemp);
+                        audioObjectRef.current = audioObject
+                    };
+
+
+                };
+
+            })
+            
+            // Error callback
+            .catch((err) => {
+            console.error(`The following getUserMedia error occurred: ${err}`);
+            });
+        } else {
+        console.log("getUserMedia not supported on your browser!");
         }
-        filtered[i] = Math.sqrt(sumSquares / Math.max(1, actualLen));
-      }
+    
+    const analyser = AudioCtx.createAnalyser();
+    analyser.minDecibels = -90;
+    analyser.maxDecibels = -10;
+    
+   
 
-      // draw filled waveform (centered)
-      ctx.fillStyle = "#4287f5";
-      const centerY = cssHeight / 2;
-      const pxPerSample = cssWidth / displaySamples;
-      for (let i = 0; i < displaySamples; i++) {
-        const x = i * pxPerSample;
-        const y = filtered[i] * centerY;
-        // ensure at least 1px wide so it appears
-        const w = Math.max(1, Math.ceil(pxPerSample));
-        ctx.fillRect(x, centerY - y, w, y * 2);
-      }
-    } catch (err) {
-      // decoding failures are common for tiny partial webm chunks — ignore
-      // console.debug("decode failed (probably small chunk):", err);
+    const handleCanvasMouseDown = (e) => {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const scaleX = canvasRef.current.width / rect.width;
+        const scaleY = canvasRef.current.height / rect.height;
+        const coords = {x: (e.clientX - rect.left)*scaleX, y: e.clientY - rect.top}
+        
+        setIsDragging(true);
+        setMouseDragStart(coords);
+        setMouseDragEnd(null);
+    };
+
+    const handleCanvasMouseUp = (e) => {
+        if (!isDragging) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const scaleX = canvasRef.current.width / rect.width;
+        const scaleY = canvasRef.current.height / rect.height;
+        console.log(e.clientX,rect.left)
+        const pos = {x: (e.clientX - rect.left)*scaleX, y: e.clientY - rect.top}
+        setMouseDragEnd(pos);
+        setIsDragging(false);
+    };
+
+
+    const handlePlayAudioClick = () => {
+        socket.emit("client_to_server_play_audio",{roomID})
     }
-  };
 
-  // Real-time drawing using AnalyserNode (shows the live mic waveform while recording)
-  const drawRealtime = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !analyserRef.current) return;
-    const { ctx, cssWidth, cssHeight } = prepareCanvas(canvas);
+    const handlePlayAudio = () => {
+        const audioObject = audioObjectRef.current;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const scaleX = canvasRef.current.width / rect.width;
+        const scaleY = canvasRef.current.height / rect.height;
+        let startTime = 0
+        let endTime = audioObject.duration
+        if(mouseDragEnd&&mouseDragStart){
+            startTime = audioObject.duration * mouseDragStart.x/ canvasRef.current.width
+            endTime = audioObject.duration * mouseDragEnd.x/ canvasRef.current.width
+        }
+        audioObject.currentTime = startTime;
+        console.log(startTime,endTime)
+        audioObject.play();
+        // Stop after the duration
+        const duration = (endTime - startTime) * 1000; // Convert to milliseconds
+        setTimeout(() => {
+            audioObject.pause();
+        }, duration);
 
-    const analyser = analyserRef.current;
-    const data = dataArrayRef.current;
-    const bufferLength = analyser.fftSize;
-    analyser.getFloatTimeDomainData(data);
-
-    ctx.clearRect(0, 0, cssWidth, cssHeight);
-
-    // Optionally, draw the "background" combined waveform first if available:
-    // (we won't draw it here to keep the realtime fast)
-
-    // draw time-domain waveform as polyline
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "#ff4d4d"; // live signal color
-    ctx.beginPath();
-    const sliceWidth = cssWidth / bufferLength;
-    let x = 0;
-    for (let i = 0; i < bufferLength; i++) {
-      const v = data[i]; // -1..1
-      const y = (1 - (v + 1) / 2) * cssHeight; // map -1..1 -> 0..cssHeight
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-      x += sliceWidth;
     }
-    ctx.stroke();
 
-    realtimeAnimationRef.current = requestAnimationFrame(drawRealtime);
-  };
 
-  // Start recording: set up MediaRecorder and analyser for realtime visualization
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // create or reuse AudioContext
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      // resume (user gesture)
-      if (audioContextRef.current.state === "suspended") {
-        await audioContextRef.current.resume();
-      }
-
-      // set up analyser node for realtime
-      const sourceNode = audioContextRef.current.createMediaStreamSource(stream);
-      const analyser = audioContextRef.current.createAnalyser();
-      analyser.fftSize = 2048;
-      sourceNode.connect(analyser);
-      analyserRef.current = analyser;
-      sourceNodeRef.current = sourceNode;
-      dataArrayRef.current = new Float32Array(analyser.fftSize);
-
-      // create MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      setAudioChunks([]); // reset stored chunks
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          // 1) Send binary to socket (keep same logic you had)
-          event.data.arrayBuffer().then((buffer) => {
-            const first = audioChunks.length === 0;
-            if (socket) {
-              socket.emit("send_audio_chunk", { roomID, chunk: buffer, first });
+    if(socket){
+        socket.on("request_audio",(data)=>{
+            console.log('check1-3',data)
+            if(audioChunks){
+                console.log('typofaud',audioChunks);
+                for(let i=0;i<audioChunks.length;i++){
+                    socket.emit("send_audio",{audio:audioChunks[i],roomID,i})
+                }
             }
-          });
+            })
 
-          // 2) Update local chunks and draw combined waveform for accumulated chunks
-          setAudioChunks((prev) => {
-            const newChunks = [...prev, event.data];
-            // Draw combined waveform from the accumulated chunks (may fail on tiny partial chunks)
-            const combined = new Blob(newChunks, { type: "audio/webm; codecs=opus" });
-            // call but don't await
-            drawCombinedWaveform(combined);
-            return newChunks;
-          });
-        }
-      };
+        socket.on("receive_audio", async (data) => {
+            if(data.i==0){
+                setAudioChunks([data.audio])
+            }else {
+                setAudioChunks(prev => [...prev, data.audio]);
+            }
+        });
 
-      mediaRecorder.onerror = (err) => console.error("MediaRecorder error", err);
-
-      // Start with small timeslice so ondataavailable fires repeatedly
-      mediaRecorder.start(250); // 250ms chunks
-      setIsRecording(true);
-
-      // Start realtime visualizer
-      if (realtimeAnimationRef.current) cancelAnimationFrame(realtimeAnimationRef.current);
-      drawRealtime();
-    } catch (err) {
-      console.error("Mic access error:", err);
+        socket.on("send_play_window_to_clients", (data)=>{
+            setMouseDragStart(data.mouseDragStart);
+            setMouseDragEnd(data.mouseDragEnd);
+        })
+        socket.on("server_to_client_play_audio",(data)=>{
+            handlePlayAudio();
+        })
     }
-  };
+    
 
-  // Stop recording: stop mediaRecorder and stop realtime animation + disconnect nodes
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-    }
-    setIsRecording(false);
-
-    // stop realtime animation
-    if (realtimeAnimationRef.current) {
-      cancelAnimationFrame(realtimeAnimationRef.current);
-      realtimeAnimationRef.current = null;
-    }
-    // disconnect audio graph (but keep AudioContext for reuse)
-    if (sourceNodeRef.current && analyserRef.current) {
-      try {
-        sourceNodeRef.current.disconnect();
-        analyserRef.current.disconnect();
-      } catch (err) {}
-      sourceNodeRef.current = null;
-      analyserRef.current = null;
-    }
-
-    // draw final combined waveform one last time from accumulated chunks
-    if (audioChunks.length > 0) {
-      const combined = new Blob(audioChunks, { type: "audio/webm; codecs=opus" });
-      drawCombinedWaveform(combined);
-    }
-  };
-
-
-
-  const playRecording = () => {
-  if (audioChunks.length === 0) return;
-  
-  // Stop any currently playing audio and animations
-  if (currentAudioRef.current) {
-    currentAudioRef.current.pause();
-    currentAudioRef.current = null;
-  }
-  if (requestRef.current) {
-    cancelAnimationFrame(requestRef.current);
-    requestRef.current = null;
-  }
-  
-
-  
-  const blob = new Blob(audioChunks, { type: "audio/webm; codecs=opus" });
-  const url = URL.createObjectURL(blob);
-  const audio = new Audio(url);
-  currentAudioRef.current = audio;
-
-  // Start animation when audio can play
-  audio.oncanplaythrough = () => {
-    // Double-check we have a valid duration
-    if (audio.duration && isFinite(audio.duration)) {
-      animatePlayhead(audio.duration);
-      audio.play().catch(err => console.error("Audio play failed:", err));
-    } else {
-      console.warn("Audio duration not available:", audio.duration);
-    }
-  };
-  
-  // Fallback: if oncanplaythrough doesn't fire, try onloadedmetadata
-  audio.onloadedmetadata = () => {
-    if (audio.duration && isFinite(audio.duration) && !requestRef.current) {
-      animatePlayhead(audio.duration);
-    }
-  };
-  
-  // Handle audio end
-  audio.onended = () => {
-    if (requestRef.current) {
-      cancelAnimationFrame(requestRef.current);
-      requestRef.current = null;
-    }
-    // Reset playhead to start
-    if (playheadRef.current) {
-      playheadRef.current.style.left = '0px';
-    }
-  };
-  
-  // Start loading the audio
-  audio.load();
-};
-
-  // When receiving audio from the socket: convert to Blob and add to audioChunks
-  useEffect(() => {
-    if (!socket) return;
-
-    const handler = (data) => {
-      // data.chunk is expected to be an ArrayBuffer (server forwarded binary)
-      const chunkBuf = data.chunk;
-      const incomingBlob = new Blob([chunkBuf], { type: "audio/webm; codecs=opus" });
-
-      setAudioChunks((prev) => {
-        const newChunks = data.first ? [incomingBlob] : [...prev, incomingBlob];
-        // try to draw combined waveform for remote chunks
-        const combined = new Blob(newChunks, { type: "audio/webm; codecs=opus" });
-        drawCombinedWaveform(combined);
-        return newChunks;
-      });
-    };
-
-    socket.on("receive_audio_chunk", handler);
-    return () => socket.off("receive_audio_chunk", handler);
-  }, [socket]);
-
-  // Clicking the canvas seeks to a position in the combined audio
-  const handleCanvasClick = (e) => {
-    if (!canvasRef.current || audioChunks.length === 0) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const ratio = clickX / rect.width;
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    const blob = new Blob(audioChunks, { type: "audio/webm; codecs=opus" });
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    currentAudioRef.current = audio;
-    audio.onloadedmetadata = () => {
-      audio.currentTime = audio.duration * ratio;
-      // stop previous animation
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-      animatePlayhead(audio.duration - audio.currentTime);
-      audio.play();
-    };
-  };
-
-  // cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (realtimeAnimationRef.current) cancelAnimationFrame(realtimeAnimationRef.current);
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        // don't close necessarily — but could suspend
-        audioContextRef.current.suspend().catch(() => {});
-      }
-    };
-  }, []);
-
-  return (
-    <div className="p-4">
-      {roomResponse ? (
-        <>
-          <div>
-            <h2 className="mb-4 font-bold">RoomID: {roomID}</h2>
-            <button
-              onClick={startRecording}
-              disabled={isRecording}
-              className="mr-2 px-4 py-2 bg-green-500 text-white rounded"
+    return <div className="">
+        <div className="ml-12 mr-12 mt-12 flex justify-center">
+            <canvas 
+            ref={canvasRef} 
+            className="w-200 h-40  border-black border-3 items-center rounded-2xl"
+            onMouseDown={handleCanvasMouseDown}
+            onMouseUp={handleCanvasMouseUp}
             >
-              Start Recording
-            </button>
-            <button
-              onClick={stopRecording}
-              disabled={!isRecording}
-              className="mr-2 px-4 py-2 bg-red-500 text-white rounded"
-            >
-              Stop Recording
-            </button>
-            <button
-              onClick={playRecording}
-              disabled={audioChunks.length === 0}
-              className="px-4 py-2 bg-blue-500 text-white rounded"
-            >
-              Play My Recording
-            </button>
-          </div>
-
-          <div style={{ position: "relative", marginTop: "1rem" }}>
-            <canvas
-              ref={canvasRef}
-              width={800}
-              height={200}
-              className="border mt-4"
-              onClick={handleCanvasClick}
-              style={{ width: 800, height: 200,background:'lightgray' }}
-            />
-      
-          </div>
-        </>
-      ) : (
-        "Room not found"
-      )}
-    </div>
-  );
+            </canvas></div>
+        <button className="hover:bg-amber-400" ref={recordbuttonref}>Record</button>
+        <button className="hover:bg-red-400" ref={stoprecordingbuttonref}>Stop</button>
+        <button className="hover:bg-green-400" ref={playrecordingbuttonref}
+            onClick={handlePlayAudioClick}
+        
+            >Play</button>
+        {<div>Metronome: <form><input
+            className='mt-4 pt-1 pb-1 pl-1 border text-black border-gray-700 rounded-md bg-gray-100'
+            value={BPM}
+            onChange={e => setBPM((prev)=>{const value = e.target.value;
+              if(!/^[0-9]*$/.test(value)){
+                return prev;
+              }
+              if(value.length>3){
+                return prev;
+              };
+              return value;
+              })}
+            placeholder="BPM"
+          /></form></div>}
+        {audio && <div className="audio-container">
+                    <audio src={audioURL} controls></audio>
+                    <a download href={audioURL}>
+                    Download Recording
+                    </a>
+                </div>}
+        
+         </div>
 }
