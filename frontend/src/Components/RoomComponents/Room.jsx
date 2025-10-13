@@ -13,6 +13,11 @@ import {
 } from "@/components/ui/button-group"
 import { PiMetronomeDuotone } from "react-icons/pi";
 import { Slider } from "@/components/ui/slider"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 export default function Room(){
 
@@ -43,14 +48,14 @@ export default function Room(){
     const socket = useRef(null);
     const AudioCtxRef = useRef(null);
     const handlePlayAudioRef = useRef(null);
-    const [settingTempo,setSettingTempo] = useState(false);
+    const [displayDelayCompensationMessage,setDisplayDelayCompensationMessage] = useState(false);
     const {startRecording,
         stopRecording,
         startDelayCompensationRecording,
         isRecorderReady} = useAudioRecorder({AudioCtxRef,metronomeRef,socket,roomID,
                                             setAudio,setAudioURL,setAudioChunks,
                                             setDelayCompensationAudio,setMouseDragStart,
-                                            setMouseDragEnd,playheadRef})
+                                            setMouseDragEnd,playheadRef,setDelayCompensation})
     
 
     useEffect(() => {
@@ -302,9 +307,8 @@ export default function Room(){
                             onClick={()=>{
                                     if(playingAudioRef.current){
                                         playingAudioRef.current.stop();
-                                    }else{
-                                        stopRecording(metronomeRef);
                                     }
+                                    stopRecording(metronomeRef);
                                     metronomeRef.current.stop();
                                 }}>
                             <Square color={"lightblue"} className="" style={{width:20,height:20}}/>
@@ -332,65 +336,43 @@ export default function Room(){
                             if(value<=5000){
                                 setZoomFactor(value*(32/10000))
                             }else{
-                                setZoomFactor(4*(value-5000)*(32/10000)+value*(32/10000))
+                                setZoomFactor(4*(value-5000)*(32/10000)+5000*(32/10000))
                             }
                         }}>
                     </Slider>
                     </div>
-                    <div>Latency Compensation:
-                        <Slider style={{width:100}} defaultValue={[0]} max={10000} step={1}
-                            onValueChange={(value)=>setDelayCompensation(value)}>
+                    <Popover >
+                        <PopoverTrigger>Test for Latency</PopoverTrigger>
+                        <PopoverContent onCloseAutoFocus={()=>setDisplayDelayCompensationMessage(false)}>
+                            <div>Place your microphone near your speakers,
+                                turn your volume up,
+                            then hit the record button.</div>  
+                            <div className="grid place-items-center p-4">
+                                <Button 
+                                    variant="default" size="lg" className="bg-white hover:bg-gray-300 border-1 border-gray-400"
+                                    onClick={()=>{
+                                        startDelayCompensationRecording(metronomeRef);
+                                        setTimeout(()=>setDisplayDelayCompensationMessage(true),300)
+                                    }}
+                                    >
+                                    <Circle color={"red"}className="" style={{width:20,height:20}}/>
+                                </Button>
+                            </div>
+                            {displayDelayCompensationMessage && <div className="text-green-600">Latency compensated successfully.</div>}
+                            <div className="pt-4">Alternatively, adjust it manually:
+                                <Slider style={{width:100}} max={10000} step={1}
+                                    onValueChange={(value)=>setDelayCompensation(value)} className="p-4"
+                                    value={[delayCompensation]}
+                                    >
 
-                        </Slider>
-                    </div>
+                                </Slider>
+                            </div>
+
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </div>
         </div>
-        <button className="hover:bg-amber-400" onClick={()=>{startRecording(metronomeRef)}}>Record</button>
-        <button className="hover:bg-red-400" onClick={()=>{stopRecording(metronomeRef)}}>Stop Recording</button>
-        <button className="hover:bg-green-400" ref={playrecordingbuttonref}
-            onClick={()=>{handlePlayAudio();socket.current.emit("client_to_server_play_audio",{roomID})}}
-        
-            >Play</button>
-        <button className="hover:bg-green-500" onClick={()=>{
-                if(playingAudioRef.current){
-                    playingAudioRef.current.stop();
-                }
-                metronomeRef.current.stop();
-            }}>Stop Playing</button>
-        {<div>Metronome: <form><input
-            className='mt-4 pt-1 pb-1 pl-1 border text-black border-gray-700 rounded-md bg-gray-100'
-            value={BPM}
-            onChange={e => 
-                setBPM((prev)=>{const value = e.target.value;
-                if(!/^[0-9]*$/.test(value)){
-                    return prev;
-                }
-                if(value.length>3){
-                    return prev;
-                };
-                return value;
-              })}
-            placeholder="BPM"
-          /></form></div>}
-        {<div>Zoom Factor: <form><input
-            className='mt-4 pt-1 pb-1 pl-1 border text-black border-gray-700 rounded-md bg-gray-100'
-            value={zoomFactor}
-            onChange={e => 
-                setZoomFactor((prev)=>e.target.value)
-            }
-            placeholder="Zoom factor"
-          /></form></div>}
-        {<div>Delay Compensation: <form><input
-            className='mt-4 pt-1 pb-1 pl-1 border text-black border-gray-700 rounded-md bg-gray-100'
-            value={delayCompensation}
-            onChange={e => 
-                setDelayCompensation((prev)=>e.target.value)
-            }
-            placeholder="Delay compensation"
-          /></form></div>}
-        {<button className="hover:bg-cyan-500" onClick={()=>startDelayCompensationRecording(metronomeRef)}>Record Delay Compensation</button>}
-        {<button className="hover:bg-cyan-400" ref={delayCompensationPlayRef} onClick={SetDelayCompensation}>Set Delay Compensation</button>}
         {audio && <div className="audio-container">
                     <audio src={audioURL} controls></audio>
                     <a download href={audioURL}>
