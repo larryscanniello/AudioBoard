@@ -27,18 +27,30 @@ const socketManager = (server,sessionMiddleware) => {
     // Listen for a 'join_room' event
     socket.on('join_room', (roomID) => {
       socket.join(roomID);
-      io.to(roomID).emit('request_audio',{})
+      /*const allSockets = Array.from(io.sockets.sockets.values());
+      const others = allSockets.filter(s => s.id !== socket.id)
+      console.log('others',others)
+      if(others.length>0){
+        const randomSocket = others[0];
+        randomSocket.to(roomID).emit("request_audio_server_to_client",{user:userID})
+      }*/
+      socket.to(roomID).emit('request_audio_server_to_client',{user:userID});
       console.log(`User ${socket.handshake.session.passport.user} joined room: ${roomID}`);
-
     });
 
-    socket.on("send_audio",(data)=>{
-      console.log('check104',data)
-      io.to(data.roomID).emit("receive_audio",{audio:data.audio,i:data.i})
+    socket.on("send_audio_client_to_server",(data)=>{
+      console.log('check3')
+      if(data.user==="all"){
+        console.log('check2')
+        socket.to(data.roomID).emit("receive_audio_server_to_client",{audio:data.audio,i:data.i,length:data.length})
+      }else{
+        console.log('check1')
+        socket.to(data.roomID).emit("receive_audio_server_to_client",{audio:data.audio,i:data.i,length:data.length})
+      }
     })
 
     socket.on("client_to_server_play_audio",(data)=>{
-      io.to(data.roomID).emit("server_to_client_play_audio",{})
+      socket.to(data.roomID).emit("server_to_client_play_audio",{})
     })
 
     socket.on("send_audio_chunk", (data) => {
@@ -49,6 +61,7 @@ const socketManager = (server,sessionMiddleware) => {
 
     socket.on("send_play_window_to_server",(data)=>{
       socket.to(data.roomID).emit("send_play_window_to_clients",data)
+      console.log('check-151')
     })
   });
 

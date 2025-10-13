@@ -4,7 +4,7 @@ import Layout from './Components/Layout';
 import Landing from './Components/Landing';
 import Account from './Components/Account'
 import Home from './Components/Home'
-import Room from './Components/Room';
+import Room from './Components/RoomComponents/Room';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import AuthProvider from './Components/AuthProvider';
 

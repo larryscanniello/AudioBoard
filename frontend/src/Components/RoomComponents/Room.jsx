@@ -1,0 +1,312 @@
+import { useRef,useState,useEffect } from "react";
+import { useParams } from "react-router-dom";
+import io from "socket.io-client"
+import Metronome from "../../Classes/Metronome"
+import { useAudioRecorder } from "./useAudioRecorder";
+import RecorderInterface from "./recorderInterface";
+
+
+export default function Room(){
+
+    const playrecordingbuttonref = useRef(null);
+    const [audioURL,setAudioURL] = useState(null);
+    const [audio,setAudio] = useState(null);
+    const waveformRef = useRef(null);
+    const [BPM,setBPM] = useState(120);
+    const [mouseDragStart,setMouseDragStart] = useState(null);
+    const [mouseDragEnd,setMouseDragEnd] = useState(null);
+    const [isDragging,setIsDragging] = useState(null);
+    const audioObjectRef = useRef(null);
+    const { roomID } = useParams();
+    const [roomResponse,setRoomResponse] = useState(null);
+    const [audioChunks,setAudioChunks] = useState([]);
+    const playheadRef = useRef(null);
+    const [zoomFactor,setZoomFactor] = useState(8);
+    const [delayCompensation,setDelayCompensation] = useState(0);
+    const delayCompensationSourceRef = useRef(null);
+    const measureTickRef = useRef(null);
+    const metronomeRef = useRef(null);
+    const delayCompensationRecordRef = useRef(null);
+    const delayCompensationPlayRef = useRef(null);
+    const [delayCompensationAudio,setDelayCompensationAudio] = useState(null);
+    const [currentlyAdjustingLatency,setCurrentlyAdjustingLatency] = useState(null);
+    const playingAudioRef = useRef(null);
+    const currentlyPlayingAudio = useRef(false);
+    const socket = useRef(null);
+    const AudioCtxRef = useRef(null);
+    const handlePlayAudioRef = useRef(null);
+    const {startRecording,
+        stopRecording,
+        startDelayCompensationRecording,
+        isRecorderReady} = useAudioRecorder({AudioCtxRef,metronomeRef,socket,roomID,
+                                            setAudio,setAudioURL,setAudioChunks,
+                                            setDelayCompensationAudio,setMouseDragStart,
+                                            setMouseDragEnd,playheadRef})
+    
+
+    useEffect(() => {
+        AudioCtxRef.current = new AudioContext;
+        metronomeRef.current = new Metronome;
+        metronomeRef.current.audioContext = AudioCtxRef.current;
+        const newSocket = io("http://localhost:3000", { withCredentials: true });
+        socket.current = newSocket;
+        const analyser = AudioCtxRef.current.createAnalyser();
+        analyser.minDecibels = -90;
+        analyser.maxDecibels = -10;
+
+        const processAudio = async (newchunks) => {
+            console.log('check04')
+            const blob = new Blob(newchunks, { type: "audio/ogg; codecs=opus" });
+            const audioURLtemp = window.URL.createObjectURL(blob);
+            setAudioURL(audioURLtemp);
+            const arrayBuffer = await blob.arrayBuffer();
+            const decoded = await AudioCtxRef.current.decodeAudioData(arrayBuffer);
+            setAudio(decoded);
+        }
+
+        socket.current.on("receive_audio_server_to_client", async (data) => {
+            console.log('loam',data)
+            if(data.i==0){
+                setAudioChunks(()=>{
+                    if(data.length===1){
+                        processAudio([data.audio])
+                        setMouseDragStart({x:0,xactual:0});
+                        setMouseDragEnd({x:0});
+                        playheadRef.current.style.transform = "translateX(0)";
+                    }
+                    return [data.audio]
+                })
+            }else {
+                setAudioChunks(prev => {
+                    if(data.i!=prev.length){
+                        return prev
+                    }
+
+                    const newchunks = [...prev, data.audio]
+                    
+                    if(data.length==newchunks.length){
+                        console.log('1234')
+                        processAudio(newchunks);
+                        setMouseDragStart({x:0,xactual:0});
+                        setMouseDragEnd({x:0});
+                        playheadRef.current.style.transform = "translateX(0)";
+                    }
+                    return newchunks
+                });
+            }
+        });
+        
+        socket.current.on("send_play_window_to_clients", (data)=>{
+            console.log('333')
+            setMouseDragStart(data.mouseDragStart);
+            setMouseDragEnd(data.mouseDragEnd);
+            const start = data.mouseDragEnd ? data.mouseDragStart.x : data.mouseDragStart ? data.mouseDragStart.xactual : 0;
+            playheadRef.current.style.transform = `translateX(${start}px)`
+        })
+
+        socket.current.on("server_to_client_play_audio",(data)=>{
+            handlePlayAudioRef.current();
+        })
+        
+        socket.current.on("request_audio_server_to_client", (data) => {
+            setAudioChunks(currentChunks => {
+                if(currentChunks && currentChunks.length > 0){
+                    for(let i = 0; i < currentChunks.length; i++){
+                        socket.current.emit("send_audio_client_to_server", {
+                            audio: currentChunks[i],roomID,
+                            i,user: data.user,
+                            length: currentChunks.length
+                        });
+                    }
+                }
+                return currentChunks;
+            });
+        });
+        async function verifyRoom() {
+            const response = await fetch("http://localhost:3000/getroom/" + roomID, {
+                credentials: "include",
+                method: "GET",
+            });
+            if (response.ok) {
+                setRoomResponse(true);
+                socket.current.emit("join_room", roomID);
+                console.log(`Attempting to join socket room: ${roomID}`);
+            } else {
+                setRoomResponse(false);
+            }
+        }
+
+        verifyRoom();
+
+
+        return ()=>{
+            socket.current.disconnect();
+            AudioCtxRef.current?.close();
+        }
+
+        
+    }, []);
+
+
+    useEffect(() => {
+        handlePlayAudioRef.current = handlePlayAudio;
+    });
+
+    if(metronomeRef.current){
+        metronomeRef.current.tempo = BPM;
+    }
+
+    const handlePlayAudio = () => {
+        console.log('wtf',audio)
+        const source = AudioCtxRef.current.createBufferSource();
+        source.buffer = audio;
+        source.connect(AudioCtxRef.current.destination);
+        source.onended = () => {
+            currentlyPlayingAudio.current=false;
+        }
+        const rect = waveformRef.current.getBoundingClientRect();
+        const totalTime = (128*60/BPM)
+        const duration = source.buffer.length/AudioCtxRef.current.sampleRate;
+        const waveformWidth = rect.width
+        let startTime = 0;
+        let endTime = duration;
+        let timeToNextMeasure = 0;
+        if(mouseDragStart&&!mouseDragEnd){
+            startTime = totalTime * mouseDragStart.xactual/ waveformRef.current.width;
+            const nextBeat = 128*mouseDragStart.xactual/waveformRef.current.width
+            metronomeRef.current.currentBeatInBar = Math.ceil(nextBeat)%4
+            const beatFractionToNextMeasure = Math.ceil(nextBeat)-nextBeat
+            const secondsPerBeat = (60/BPM)
+            timeToNextMeasure = beatFractionToNextMeasure * secondsPerBeat
+        }else if(mouseDragStart&&mouseDragEnd){
+            startTime = totalTime * mouseDragStart.x/ waveformRef.current.width;
+            metronomeRef.current.currentBeatInBar = Math.floor(128*mouseDragStart.x/waveformRef.current.width)%4
+        }
+        if(mouseDragEnd){
+            endTime = totalTime * mouseDragEnd.x/ waveformRef.current.width;
+        }
+        let now = AudioCtxRef.current.currentTime;
+        const pixelsPerSecond = rect.width/((60/BPM)*128)
+        const updatePlayhead = () => {
+            const elapsed = AudioCtxRef.current.currentTime - now;
+            const start = mouseDragEnd ? mouseDragStart.x : mouseDragStart ? mouseDragStart.xactual : 0;
+            const x = start+(elapsed * pixelsPerSecond);
+            playheadRef.current.style.transform = `translateX(${x}px)`;
+            if(AudioCtxRef.current.currentTime<now+endTime&&currentlyPlayingAudio.current){
+                requestAnimationFrame(updatePlayhead);
+            }else{
+                metronomeRef.current.stop();
+            }
+            
+        }
+                        
+        const secondsToDelay = delayCompensation/AudioCtxRef.current.sampleRate
+        metronomeRef.current.start(now+timeToNextMeasure);
+        console.log('src',source,startTime+secondsToDelay,endTime-startTime,endTime)
+        source.start(0,startTime+secondsToDelay,endTime-startTime)
+        playingAudioRef.current = source;
+        currentlyPlayingAudio.current = true;
+        updatePlayhead()
+    }
+
+    const SetDelayCompensation = () => {
+        if(!currentlyAdjustingLatency){
+            /*const source = AudioCtxRef.current.createBufferSource();
+            source.buffer = delayCompensationAudio;
+            source.connect(AudioCtxRef.current.destination);
+            const start = AudioCtxRef.current.currentTime;
+            console.log('heck',delayCompensation/AudioCtxRef.current.sampleRate)
+            source.start(0,1+delayCompensation/AudioCtxRef.current.sampleRate)
+            //metronomeRef.current.start()
+            delayCompensationSourceRef.current = source;*/
+        }else{
+            delayCompensationSourceRef.current.stop();
+            metronomeRef.current.stop();
+        }
+        setCurrentlyAdjustingLatency(prev=>!prev)
+    }
+
+    if(currentlyAdjustingLatency){
+        if(delayCompensationSourceRef.current){
+            delayCompensationSourceRef.current.stop();
+        }
+        if(metronomeRef.current){
+            metronomeRef.current.stop();
+        }
+        const source = AudioCtxRef.current.createBufferSource();
+        source.buffer = delayCompensationAudio;
+        source.connect(AudioCtxRef.current.destination);
+        const start = AudioCtxRef.current.currentTime;
+        console.log('heck2',delayCompensation,delayCompensation/AudioCtxRef.current.sampleRate)
+        source.start(0,delayCompensation/AudioCtxRef.current.sampleRate);
+        metronomeRef.current.start();
+        delayCompensationSourceRef.current = source;
+    }
+
+    
+
+
+    return <div className="">
+        <div className="w-full grid place-items-center items-center">
+            <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
+                                delayCompensation={delayCompensation} measureTickRef={measureTickRef}
+                                setIsDragging={setIsDragging} mouseDragStart={mouseDragStart}
+                                audioCtxRef={AudioCtxRef} waveformRef={waveformRef}
+                                playheadRef={playheadRef} isDragging={isDragging} setMouseDragStart={setMouseDragStart}
+                                setMouseDragEnd={setMouseDragEnd} socket={socket} roomID={roomID}
+                                />
+        </div>
+        <button className="hover:bg-amber-400" onClick={()=>{startRecording(metronomeRef)}}>Record</button>
+        <button className="hover:bg-red-400" onClick={()=>{stopRecording(metronomeRef)}}>Stop Recording</button>
+        <button className="hover:bg-green-400" ref={playrecordingbuttonref}
+            onClick={()=>{handlePlayAudio();socket.current.emit("client_to_server_play_audio",{roomID})}}
+        
+            >Play</button>
+        <button className="hover:bg-green-500" onClick={()=>{
+                if(playingAudioRef.current){
+                    playingAudioRef.current.stop();
+                }
+                metronomeRef.current.stop();
+            }}>Stop Playing</button>
+        {<div>Metronome: <form><input
+            className='mt-4 pt-1 pb-1 pl-1 border text-black border-gray-700 rounded-md bg-gray-100'
+            value={BPM}
+            onChange={e => 
+                setBPM((prev)=>{const value = e.target.value;
+                if(!/^[0-9]*$/.test(value)){
+                    return prev;
+                }
+                if(value.length>3){
+                    return prev;
+                };
+                return value;
+              })}
+            placeholder="BPM"
+          /></form></div>}
+        {<div>Zoom Factor: <form><input
+            className='mt-4 pt-1 pb-1 pl-1 border text-black border-gray-700 rounded-md bg-gray-100'
+            value={zoomFactor}
+            onChange={e => 
+                setZoomFactor((prev)=>e.target.value)
+            }
+            placeholder="Zoom factor"
+          /></form></div>}
+        {<div>Delay Compensation: <form><input
+            className='mt-4 pt-1 pb-1 pl-1 border text-black border-gray-700 rounded-md bg-gray-100'
+            value={delayCompensation}
+            onChange={e => 
+                setDelayCompensation((prev)=>e.target.value)
+            }
+            placeholder="Delay compensation"
+          /></form></div>}
+        {<button className="hover:bg-cyan-500" onClick={()=>startDelayCompensationRecording(metronomeRef)}>Record Delay Compensation</button>}
+        {<button className="hover:bg-cyan-400" ref={delayCompensationPlayRef} onClick={SetDelayCompensation}>Set Delay Compensation</button>}
+        {audio && <div className="audio-container">
+                    <audio src={audioURL} controls></audio>
+                    <a download href={audioURL}>
+                    Download Recording
+                    </a>
+                </div>}
+        
+         </div>
+}
