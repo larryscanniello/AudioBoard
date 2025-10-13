@@ -4,7 +4,15 @@ import io from "socket.io-client"
 import Metronome from "../../Classes/Metronome"
 import { useAudioRecorder } from "./useAudioRecorder";
 import RecorderInterface from "./recorderInterface";
-
+import { Button } from "@/components/ui/button"
+import { Play, Square, Circle } from "lucide-react"
+import {
+  ButtonGroup,
+  ButtonGroupSeparator,
+  ButtonGroupText,
+} from "@/components/ui/button-group"
+import { PiMetronomeDuotone } from "react-icons/pi";
+import { Slider } from "@/components/ui/slider"
 
 export default function Room(){
 
@@ -35,6 +43,7 @@ export default function Room(){
     const socket = useRef(null);
     const AudioCtxRef = useRef(null);
     const handlePlayAudioRef = useRef(null);
+    const [settingTempo,setSettingTempo] = useState(false);
     const {startRecording,
         stopRecording,
         startDelayCompensationRecording,
@@ -157,7 +166,6 @@ export default function Room(){
     }
 
     const handlePlayAudio = () => {
-        console.log('wtf',audio)
         const source = AudioCtxRef.current.createBufferSource();
         source.buffer = audio;
         source.connect(AudioCtxRef.current.destination);
@@ -243,18 +251,100 @@ export default function Room(){
         delayCompensationSourceRef.current = source;
     }
 
-    
+    const handleTempoMouseDown = (e) => {
+        e.preventDefault();
+        const startY = e.clientY;
+        const startBPM = BPM;
+
+        const handleMouseMove = (e) => {
+            const deltaY = (startY - e.clientY)/2;
+            setBPM(prev=>{
+                const newbpm = startBPM + Math.floor(deltaY)
+                if(30<=newbpm&&newbpm<=400){
+                    return newbpm
+                }else{
+                    return prev
+                }
+            });
+        };
+
+        const handleMouseUp = () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", handleMouseUp);
+        };
+
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+};
 
 
     return <div className="">
         <div className="w-full grid place-items-center items-center">
-            <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
+            <div className="grid h-80 bg-gray-700 rounded-4xl"
+                style={{width:1100}}>
+                <div className="grid place-items-center items-center">
+                    <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
                                 delayCompensation={delayCompensation} measureTickRef={measureTickRef}
                                 setIsDragging={setIsDragging} mouseDragStart={mouseDragStart}
                                 audioCtxRef={AudioCtxRef} waveformRef={waveformRef}
                                 playheadRef={playheadRef} isDragging={isDragging} setMouseDragStart={setMouseDragStart}
                                 setMouseDragEnd={setMouseDragEnd} socket={socket} roomID={roomID}
                                 />
+                </div>
+                <div className="grid grid-rows-1 grid-cols-4 place-items-center items-center">
+                    <ButtonGroup className="rounded border-1 border-gray-300">
+                        <Button variant="default" size="lg" className="hover:bg-gray-800"
+                            onClick={()=>{handlePlayAudio();socket.current.emit("client_to_server_play_audio",{roomID})}}>
+                            <Play color={"lightgreen"} style={{width:20,height:20}}/> 
+                        </Button>
+                        <ButtonGroupSeparator/>
+                        <Button variant="default" size="lg" className="hover:bg-gray-800"
+                            onClick={()=>{
+                                    if(playingAudioRef.current){
+                                        playingAudioRef.current.stop();
+                                    }else{
+                                        stopRecording(metronomeRef);
+                                    }
+                                    metronomeRef.current.stop();
+                                }}>
+                            <Square color={"lightblue"} className="" style={{width:20,height:20}}/>
+                        </Button>
+                        <ButtonGroupSeparator/>
+                        <Button 
+                            variant="default" size="lg" className="hover:bg-gray-800"
+                            onClick={()=>{startRecording(metronomeRef)}}
+                        >
+                            <Circle color={"red"}className="" style={{width:20,height:20}}/>
+                        </Button>
+                        <ButtonGroupSeparator/>
+                        <Button variant="default" className="hover:bg-gray-800">
+                            <PiMetronomeDuotone style={{width:20,height:20}}/>
+                        </Button>
+                    </ButtonGroup>
+                    <div>
+                        Tempo: <div className="border-1 border-gray-300 p-4"
+                                    onMouseDown={handleTempoMouseDown}
+                                        >{BPM}</div>
+                    </div>
+                    <div>Zoom:
+                    <Slider style={{width:100}} defaultValue={[5000]} max={6250} min={10000/32} step={1} 
+                        onValueChange={(value)=>{
+                            if(value<=5000){
+                                setZoomFactor(value*(32/10000))
+                            }else{
+                                setZoomFactor(4*(value-5000)*(32/10000)+value*(32/10000))
+                            }
+                        }}>
+                    </Slider>
+                    </div>
+                    <div>Latency Compensation:
+                        <Slider style={{width:100}} defaultValue={[0]} max={10000} step={1}
+                            onValueChange={(value)=>setDelayCompensation(value)}>
+
+                        </Slider>
+                    </div>
+                </div>
+            </div>
         </div>
         <button className="hover:bg-amber-400" onClick={()=>{startRecording(metronomeRef)}}>Record</button>
         <button className="hover:bg-red-400" onClick={()=>{stopRecording(metronomeRef)}}>Stop Recording</button>

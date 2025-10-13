@@ -9,9 +9,9 @@ export default function NavBar(){
   const [isAuthorized, setIsAuthorized] = auth;
 
   return (
-    <nav className="flex justify-between items-center pl-24 pt-3 pb-3 pr-24 border-gray-500 border-b">
+    <nav className="flex justify-between items-center pl-24 pt-3 pb-3 pr-24">
       <div>
-        <a className="font-bold pr-8" href="/home">Lesson Website</a>
+        <a className="font-bold pr-8" href="/home">AudioBoard</a>
       </div>
       <div className="flex justify-between items-center space-x-8">
         {isAuthorized ? (

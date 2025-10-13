@@ -148,26 +148,26 @@ export default function RecorderInterface({
     };
 
 
-    return <div className="grid overflow-x-auto relative h-48"
+    return <div className="grid overflow-x-auto relative h-48 rounded-2xl"
                 style={{width:1000}}>
                 <canvas className="h-10 row-start-1 col-start-1"
-                    style={{width:1000*Math.floor(zoomFactor)}}
-                    width={1000*Math.floor(zoomFactor)}
+                    style={{width:Math.floor(1000*zoomFactor)}}
+                    width={Math.floor(1000*zoomFactor)}
                     height={40}
                     ref={measureTickRef}
                 >
                 </canvas>
                 <canvas
                     ref={canvasContainerRef}
-                    width={1000*Math.floor(zoomFactor)}
+                    width={Math.floor(1000*zoomFactor)}
                     style={{width:`${Math.floor(1000*zoomFactor)}px`,imageRendering:"pixelated"}}
                     className="h-40 row-start-2 col-start-1"
                     >
                 </canvas>
                 <canvas 
                 ref={waveformRef}
-                width={1000*Math.floor(zoomFactor)}
-                style={{width:1000*Math.floor(zoomFactor),imageRendering:"pixelated"}} 
+                width={Math.floor(1000*zoomFactor)}
+                style={{width:Math.floor(1000*zoomFactor),imageRendering:"pixelated"}} 
                 className={`h-40 row-start-2 col-start-1`}
                 onMouseDown={handleCanvasMouseDown}
                 onMouseUp={handleCanvasMouseUp}
