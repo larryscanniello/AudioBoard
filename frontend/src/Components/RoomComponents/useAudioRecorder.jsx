@@ -1,5 +1,5 @@
 // useAudioRecorder.js
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useState } from 'react';
 
 export const useAudioRecorder = (
   {AudioCtxRef,
@@ -15,12 +15,15 @@ export const useAudioRecorder = (
   setMouseDragStart,
   setMouseDragEnd,    
   playheadRef,
-  metronomeOn
+  metronomeOn,
+  waveformRef,
+  BPM
 }
 ) => {
   const mediaRecorderRef = useRef(null);
   const delayCompensationRecorderRef = useRef(null);
   const streamRef = useRef(null);
+  const currentlyRecording = useRef(false);
 
   // Initialize media stream and recorders
   useEffect(() => {
@@ -131,20 +134,40 @@ export const useAudioRecorder = (
   // Recording control functions
   const startRecording = (metRef) => {
     if (mediaRecorderRef.current && metRef.current) {
-      if(metronomeOn){
-        metRef.current.start();
-      }
-      mediaRecorderRef.current.start();
-      console.log("Recording started");
+        currentlyRecording.current = true;
+        
+        if(metronomeOn){
+            metRef.current.start();
+        }
+        mediaRecorderRef.current.start();
+        const now = AudioCtxRef.current.currentTime
+        const rect = waveformRef.current.getBoundingClientRect();
+        const pixelsPerSecond = rect.width/((60/BPM)*128)
+        const updatePlayhead = () => {
+                const waveformCtx = waveformRef.current.getContext("2d");
+                const elapsed = AudioCtxRef.current.currentTime - now;
+                const x = (elapsed * pixelsPerSecond);
+                waveformCtx.clearRect(0,0,rect.width,rect.height)
+                waveformCtx.fillStyle = "rgb(0,75,200)"
+                waveformCtx.globalAlpha = .20
+                waveformCtx.fillRect(0,0,x,rect.height)
+                playheadRef.current.style.transform = `translateX(${x}px)`;
+                if(currentlyRecording.current){
+                    requestAnimationFrame(updatePlayhead);
+                }
+            }
+        updatePlayhead()
+        console.log("Recording started");
     }
   }
 
   const stopRecording = (metRef) => {
     if (mediaRecorderRef.current && metRef.current) {
+        currentlyRecording.current = false;
         metRef.current.stop();
         mediaRecorderRef.current.stop();
         console.log("Recording stopped");
-        }
+    }
   }
 
   const startDelayCompensationRecording = (metRef) => {

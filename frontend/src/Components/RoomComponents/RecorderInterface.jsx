@@ -110,8 +110,18 @@ export default function RecorderInterface({
                         x += sliceWidth;
                         
                     }
-                    canvasCtx.lineTo(WIDTH,HEIGHT/2);
+                    //canvasCtx.lineTo(WIDTH,HEIGHT/2);
                     canvasCtx.stroke();
+                    //canvasCtx.fillStyle = "rgb(250, 190, 20)"
+                    canvasCtx.fillStyle = "rgb(0,75,200)"
+                    canvasCtx.globalAlpha = .15
+                    canvasCtx.fillRect(0,0,x,HEIGHT)
+                    canvasCtx.lineWidth = 2;
+                    canvasCtx.strokeStyle = "rgb(0,75,200)"
+                    canvasCtx.globalAlpha = 1
+                    //canvasCtx.strokeRect(0,0,x,HEIGHT);
+                    //canvasCtx.stroke()
+                    
                 }
                 drawWaveform();
                 
@@ -158,6 +168,7 @@ export default function RecorderInterface({
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
             playheadRef.current.style.transform = `translateX(${x}px)`;
+            setMouseDragStart({x,xactual:x})
         }
     }
 
@@ -192,6 +203,9 @@ export default function RecorderInterface({
                 onMouseMove={handleMouseMove}
                 >
                 </canvas>
+                {/*<div style={{width:}} className="h-40 row-start-2 col-start-2 bg-amber-300 opacity-30">
+
+                </div>*/}
                 <div ref={playheadRef}
                     onMouseDown={handleMovePlayhead}
                     onMouseMove={handleMouseMove}

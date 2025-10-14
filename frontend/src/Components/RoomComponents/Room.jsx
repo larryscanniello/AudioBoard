@@ -5,7 +5,7 @@ import Metronome from "../../Classes/Metronome"
 import { useAudioRecorder } from "./useAudioRecorder";
 import RecorderInterface from "./recorderInterface";
 import { Button } from "@/components/ui/button"
-import { Play, Square, Circle } from "lucide-react"
+import { Play, Square, Circle,SkipBack } from "lucide-react"
 import {
   ButtonGroup,
   ButtonGroupSeparator,
@@ -58,7 +58,7 @@ export default function Room(){
                                             setAudio,setAudioURL,setAudioChunks,
                                             setDelayCompensationAudio,setMouseDragStart,
                                             setMouseDragEnd,playheadRef,setDelayCompensation,
-                                            metronomeOn})
+                                            metronomeOn,waveformRef,BPM})
     
     
 
@@ -81,6 +81,17 @@ export default function Room(){
             const decoded = await AudioCtxRef.current.decodeAudioData(arrayBuffer);
             setAudio(decoded);
         }
+
+        const handleEnterKey = (e) => {
+            if(e.key==="Enter"){
+                setMouseDragStart({x:0,xactual:0});
+                setMouseDragEnd(null);
+                playheadRef.current.style.transform = "translateX(0px)"
+            }
+        }
+
+        window.addEventListener("keydown",handleEnterKey)
+        
 
         socket.current.on("receive_audio_server_to_client", async (data) => {
             console.log('loam',data)
@@ -160,6 +171,7 @@ export default function Room(){
         return ()=>{
             socket.current.disconnect();
             AudioCtxRef.current?.close();
+            window.removeEventListener("keydown",handleEnterKey)
         }
 
         
@@ -214,7 +226,6 @@ export default function Room(){
             }else{
                 metronomeRef.current.stop();
             }
-            
         }
                         
         const secondsToDelay = delayCompensation/AudioCtxRef.current.sampleRate
@@ -279,6 +290,13 @@ export default function Room(){
         window.addEventListener("mouseup", handleMouseUp);
 };
 
+    const handleSkipBack = () => {
+        setMouseDragEnd(null);
+        setMouseDragStart({x:0,xactual:0});
+        playheadRef.current.style.transform = "translateX(0px)"
+    }
+
+
 
     return <div className="">
         <div className="w-full grid place-items-center items-center">
@@ -316,6 +334,12 @@ export default function Room(){
                             onClick={()=>{startRecording(metronomeRef)}}
                         >
                             <Circle color={"red"}className="" style={{width:20,height:20}}/>
+                        </Button>
+                        <ButtonGroupSeparator/>
+                        <Button variant="default" size="lg" className="hover:bg-gray-800"
+                            onClick={handleSkipBack}
+                            >
+                            <SkipBack style={{width:20,height:20}} color="orange"/>
                         </Button>
                         <ButtonGroupSeparator/>
                         <Button variant="default" size="lg" className="hover:bg-gray-800"
