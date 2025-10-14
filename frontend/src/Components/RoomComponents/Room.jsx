@@ -18,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { FaMagnifyingGlass } from "react-icons/fa6";
 
 export default function Room(){
 
@@ -49,13 +50,16 @@ export default function Room(){
     const AudioCtxRef = useRef(null);
     const handlePlayAudioRef = useRef(null);
     const [displayDelayCompensationMessage,setDisplayDelayCompensationMessage] = useState(false);
+    const [metronomeOn,setMetronomeOn] = useState(true);
     const {startRecording,
         stopRecording,
         startDelayCompensationRecording,
         isRecorderReady} = useAudioRecorder({AudioCtxRef,metronomeRef,socket,roomID,
                                             setAudio,setAudioURL,setAudioChunks,
                                             setDelayCompensationAudio,setMouseDragStart,
-                                            setMouseDragEnd,playheadRef,setDelayCompensation})
+                                            setMouseDragEnd,playheadRef,setDelayCompensation,
+                                            metronomeOn})
+    
     
 
     useEffect(() => {
@@ -214,7 +218,9 @@ export default function Room(){
         }
                         
         const secondsToDelay = delayCompensation/AudioCtxRef.current.sampleRate
-        metronomeRef.current.start(now+timeToNextMeasure);
+        if(metronomeOn){
+            metronomeRef.current.start(now+timeToNextMeasure);
+        }
         console.log('src',source,startTime+secondsToDelay,endTime-startTime,endTime)
         source.start(0,startTime+secondsToDelay,endTime-startTime)
         playingAudioRef.current = source;
@@ -224,14 +230,6 @@ export default function Room(){
 
     const SetDelayCompensation = () => {
         if(!currentlyAdjustingLatency){
-            /*const source = AudioCtxRef.current.createBufferSource();
-            source.buffer = delayCompensationAudio;
-            source.connect(AudioCtxRef.current.destination);
-            const start = AudioCtxRef.current.currentTime;
-            console.log('heck',delayCompensation/AudioCtxRef.current.sampleRate)
-            source.start(0,1+delayCompensation/AudioCtxRef.current.sampleRate)
-            //metronomeRef.current.start()
-            delayCompensationSourceRef.current = source;*/
         }else{
             delayCompensationSourceRef.current.stop();
             metronomeRef.current.stop();
@@ -250,7 +248,6 @@ export default function Room(){
         source.buffer = delayCompensationAudio;
         source.connect(AudioCtxRef.current.destination);
         const start = AudioCtxRef.current.currentTime;
-        console.log('heck2',delayCompensation,delayCompensation/AudioCtxRef.current.sampleRate)
         source.start(0,delayCompensation/AudioCtxRef.current.sampleRate);
         metronomeRef.current.start();
         delayCompensationSourceRef.current = source;
@@ -285,7 +282,7 @@ export default function Room(){
 
     return <div className="">
         <div className="w-full grid place-items-center items-center">
-            <div className="grid h-80 bg-gray-700 rounded-4xl"
+            <div className="grid h-80 bg-gray-700 rounded-2xl"
                 style={{width:1100}}>
                 <div className="grid place-items-center items-center">
                     <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
@@ -296,7 +293,7 @@ export default function Room(){
                                 setMouseDragEnd={setMouseDragEnd} socket={socket} roomID={roomID}
                                 />
                 </div>
-                <div className="grid grid-rows-1 grid-cols-4 place-items-center items-center">
+                <div className="grid grid-rows-1 grid-cols-3 place-items-center items-center">
                     <ButtonGroup className="rounded border-1 border-gray-300">
                         <Button variant="default" size="lg" className="hover:bg-gray-800"
                             onClick={()=>{handlePlayAudio();socket.current.emit("client_to_server_play_audio",{roomID})}}>
@@ -321,18 +318,20 @@ export default function Room(){
                             <Circle color={"red"}className="" style={{width:20,height:20}}/>
                         </Button>
                         <ButtonGroupSeparator/>
-                        <Button variant="default" className="hover:bg-gray-800">
-                            <PiMetronomeDuotone style={{width:20,height:20}}/>
+                        <Button variant="default" size="lg" className="hover:bg-gray-800"
+                                onClick={()=>setMetronomeOn(prev=>!prev)}>
+                            <PiMetronomeDuotone style={{width:20,height:20}} 
+                                                color={metronomeOn ? "pink" : ""}
+                                                />
+                        </Button>
+                        <ButtonGroupSeparator/>
+                        <Button variant="default" size="lg" onMouseDown={handleTempoMouseDown}>
+                            {BPM}
                         </Button>
                     </ButtonGroup>
-                    <div>
-                        Tempo: <div className="border-1 border-gray-300 p-4"
-                                    onMouseDown={handleTempoMouseDown}
-                                        >{BPM}</div>
-                    </div>
-                    <div>Zoom:
-                    <Slider style={{width:100}} defaultValue={[5000]} max={6250} min={10000/32} step={1} 
-                        onValueChange={(value)=>{
+                    <div className="flex"><FaMagnifyingGlass/>
+                    <Slider style={{width:100}} defaultValue={[5000]} max={5000} min={10000/32} step={1} 
+                        className="pl-2" onValueChange={(value)=>{
                             if(value<=5000){
                                 setZoomFactor(value*(32/10000))
                             }else{
@@ -342,7 +341,7 @@ export default function Room(){
                     </Slider>
                     </div>
                     <Popover >
-                        <PopoverTrigger>Test for Latency</PopoverTrigger>
+                        <PopoverTrigger className="hover:underline">Latency</PopoverTrigger>
                         <PopoverContent onCloseAutoFocus={()=>setDisplayDelayCompensationMessage(false)}>
                             <div>Place your microphone near your speakers,
                                 turn your volume up,

@@ -1,4 +1,4 @@
-import { useEffect,useRef } from "react";
+import { useEffect,useRef,useState } from "react";
 
 export default function RecorderInterface({
     audio,BPM,mouseDragEnd,zoomFactor,delayCompensation,
@@ -8,6 +8,7 @@ export default function RecorderInterface({
 }){
 
     const canvasContainerRef = useRef(null);
+    const [movingPlayhead,setMovingPlayhead] = useState(false);
     
 
     useEffect(()=>{
@@ -44,19 +45,20 @@ export default function RecorderInterface({
             const WIDTH = tickref.width;
             const HEIGHT = tickref.height;
             tickCtx.clearRect(0,0,WIDTH,HEIGHT);
-            tickCtx.fillStyle = "rgb(200,200,200)"
+            tickCtx.fillStyle = "rgb(175,175,175)"
             tickCtx.fillRect(0,0,WIDTH,HEIGHT);
             tickCtx.lineWidth = 5;
+            /*
             tickCtx.strokeStyle = "rgb(0,0,0)";
             tickCtx.beginPath();
             tickCtx.moveTo(0,HEIGHT);
             tickCtx.lineTo(WIDTH,HEIGHT);
-            tickCtx.stroke();
+            tickCtx.stroke();*/
             const sliceWidth = WIDTH/128;
             tickCtx.strokeStyle = "rgb(250,250,250)"
             tickCtx.lineWidth = 1;
             tickCtx.font = "16px sans-serif";
-            tickCtx.fillStyle = "rgb(250,250,250)"; // or whatever your tick color scheme is
+            tickCtx.fillStyle = "#1a1a1a"; // or whatever your tick color scheme is
             for(let i=1;i<=128;i++){
                 tickCtx.moveTo(i*sliceWidth,HEIGHT);
                 if(i%4==0){
@@ -147,10 +149,26 @@ export default function RecorderInterface({
         setIsDragging(false);
     };
 
+    const handleMovePlayhead = (e) => {
+        setMovingPlayhead(true);
+    }    
 
-    return <div className="grid overflow-x-auto relative h-48 rounded-2xl"
+    const handleMouseMove = (e) => {
+        if(movingPlayhead){
+            const rect = waveformRef.current.getBoundingClientRect();
+            const x = e.clientX-rect.left
+            playheadRef.current.style.transform = `translateX(${x}px)`;
+        }
+    }
+
+    const handleMouseUpMovePlayhead = () => {
+        setMovingPlayhead(false);
+    }
+
+
+    return <div className="grid overflow-x-auto relative h-48"
                 style={{width:1000}}>
-                <canvas className="h-10 row-start-1 col-start-1"
+                <canvas className="h-10 row-start-1 col-start-2"
                     style={{width:Math.floor(1000*zoomFactor)}}
                     width={Math.floor(1000*zoomFactor)}
                     height={40}
@@ -161,19 +179,23 @@ export default function RecorderInterface({
                     ref={canvasContainerRef}
                     width={Math.floor(1000*zoomFactor)}
                     style={{width:`${Math.floor(1000*zoomFactor)}px`,imageRendering:"pixelated"}}
-                    className="h-40 row-start-2 col-start-1"
+                    className="h-40 row-start-2 col-start-2"
                     >
                 </canvas>
                 <canvas 
                 ref={waveformRef}
                 width={Math.floor(1000*zoomFactor)}
                 style={{width:Math.floor(1000*zoomFactor),imageRendering:"pixelated"}} 
-                className={`h-40 row-start-2 col-start-1`}
+                className={`h-40 row-start-2 col-start-2`}
                 onMouseDown={handleCanvasMouseDown}
                 onMouseUp={handleCanvasMouseUp}
+                onMouseMove={handleMouseMove}
                 >
                 </canvas>
                 <div ref={playheadRef}
+                    onMouseDown={handleMovePlayhead}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUpMovePlayhead}
                     style={{position:"absolute",
                         top:0,bottom:0,
                         width:"2px",background:"red",

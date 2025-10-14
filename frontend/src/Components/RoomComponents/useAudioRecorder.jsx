@@ -14,7 +14,8 @@ export const useAudioRecorder = (
   onDelayCompensationComplete,
   setMouseDragStart,
   setMouseDragEnd,    
-  playheadRef
+  playheadRef,
+  metronomeOn
 }
 ) => {
   const mediaRecorderRef = useRef(null);
@@ -130,7 +131,9 @@ export const useAudioRecorder = (
   // Recording control functions
   const startRecording = (metRef) => {
     if (mediaRecorderRef.current && metRef.current) {
-      metRef.current.start();
+      if(metronomeOn){
+        metRef.current.start();
+      }
       mediaRecorderRef.current.start();
       console.log("Recording started");
     }
