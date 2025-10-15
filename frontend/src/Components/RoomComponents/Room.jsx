@@ -51,6 +51,8 @@ export default function Room(){
     const handlePlayAudioRef = useRef(null);
     const [displayDelayCompensationMessage,setDisplayDelayCompensationMessage] = useState(false);
     const [metronomeOn,setMetronomeOn] = useState(true);
+    const scrollWindowRef = useRef(null);
+    const currentlyRecording = useRef(false);
     const {startRecording,
         stopRecording,
         startDelayCompensationRecording,
@@ -58,7 +60,8 @@ export default function Room(){
                                             setAudio,setAudioURL,setAudioChunks,
                                             setDelayCompensationAudio,setMouseDragStart,
                                             setMouseDragEnd,playheadRef,setDelayCompensation,
-                                            metronomeOn,waveformRef,BPM})
+                                            metronomeOn,waveformRef,BPM,scrollWindowRef,
+                                            currentlyRecording})
     
     
 
@@ -86,7 +89,8 @@ export default function Room(){
             if(e.key==="Enter"){
                 setMouseDragStart({x:0,xactual:0});
                 setMouseDragEnd(null);
-                playheadRef.current.style.transform = "translateX(0px)"
+                playheadRef.current.style.transform = "translateX(0px)";
+                scrollWindowRef.current.scrollLeft = 0;
             }
         }
 
@@ -114,7 +118,6 @@ export default function Room(){
                     const newchunks = [...prev, data.audio]
                     
                     if(data.length==newchunks.length){
-                        console.log('1234')
                         processAudio(newchunks);
                         setMouseDragStart({x:0,xactual:0});
                         setMouseDragEnd({x:0});
@@ -126,7 +129,6 @@ export default function Room(){
         });
         
         socket.current.on("send_play_window_to_clients", (data)=>{
-            console.log('333')
             setMouseDragStart(data.mouseDragStart);
             setMouseDragEnd(data.mouseDragEnd);
             const start = data.mouseDragEnd ? data.mouseDragStart.x : data.mouseDragStart ? data.mouseDragStart.xactual : 0;
@@ -214,29 +216,48 @@ export default function Room(){
         if(mouseDragEnd){
             endTime = totalTime * mouseDragEnd.x/ waveformRef.current.width;
         }
+        
         let now = AudioCtxRef.current.currentTime;
         const pixelsPerSecond = rect.width/((60/BPM)*128)
-        const updatePlayhead = () => {
+        const updatePlayhead = (start) => {
             const elapsed = AudioCtxRef.current.currentTime - now;
-            const start = mouseDragEnd ? mouseDragStart.x : mouseDragStart ? mouseDragStart.xactual : 0;
             const x = start+(elapsed * pixelsPerSecond);
+            if(x>=rect.width){
+                metronomeRef.current.stop();
+                return
+            }
+            const visibleStart = scrollWindowRef.current.scrollLeft
+            const visibleEnd = visibleStart + 1000
+            if((x-visibleStart)/(visibleEnd-visibleStart)>(10/11)){
+                scrollWindowRef.current.scrollLeft = 750 + visibleStart;
+            }
             playheadRef.current.style.transform = `translateX(${x}px)`;
+
             if(AudioCtxRef.current.currentTime<now+endTime&&currentlyPlayingAudio.current){
-                requestAnimationFrame(updatePlayhead);
+                requestAnimationFrame(()=>{updatePlayhead(start)});
             }else{
                 metronomeRef.current.stop();
             }
         }
-                        
+        let start = mouseDragEnd ? mouseDragStart.x : mouseDragStart ? mouseDragStart.xactual : 0
         const secondsToDelay = delayCompensation/AudioCtxRef.current.sampleRate
+        if(startTime+secondsToDelay>=audio.getChannelData(0).length/AudioCtxRef.current.sampleRate){
+            startTime = 0;
+            endTime = duration;
+            timeToNextMeasure = 0;
+            setMouseDragStart({x:0,xactual:0})
+            setMouseDragEnd(null)
+            start = 0;
+        }
         if(metronomeOn){
             metronomeRef.current.start(now+timeToNextMeasure);
         }
-        console.log('src',source,startTime+secondsToDelay,endTime-startTime,endTime)
+        
         source.start(0,startTime+secondsToDelay,endTime-startTime)
+        
         playingAudioRef.current = source;
         currentlyPlayingAudio.current = true;
-        updatePlayhead()
+        updatePlayhead(start)
     }
 
     const SetDelayCompensation = () => {
@@ -265,6 +286,9 @@ export default function Room(){
     }
 
     const handleTempoMouseDown = (e) => {
+        if(currentlyPlayingAudio.current||currentlyRecording.current){
+            return
+        }
         e.preventDefault();
         const startY = e.clientY;
         const startBPM = BPM;
@@ -293,6 +317,7 @@ export default function Room(){
     const handleSkipBack = () => {
         setMouseDragEnd(null);
         setMouseDragStart({x:0,xactual:0});
+        scrollWindowRef.current.scrollLeft = 0;
         playheadRef.current.style.transform = "translateX(0px)"
     }
 
@@ -300,7 +325,7 @@ export default function Room(){
 
     return <div className="">
         <div className="w-full grid place-items-center items-center">
-            <div className="grid h-80 bg-gray-700 rounded-2xl"
+            <div className="grid h-80 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-amber-600 shadow-md"
                 style={{width:1100}}>
                 <div className="grid place-items-center items-center">
                     <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
@@ -309,6 +334,7 @@ export default function Room(){
                                 audioCtxRef={AudioCtxRef} waveformRef={waveformRef}
                                 playheadRef={playheadRef} isDragging={isDragging} setMouseDragStart={setMouseDragStart}
                                 setMouseDragEnd={setMouseDragEnd} socket={socket} roomID={roomID}
+                                scrollWindowRef={scrollWindowRef}
                                 />
                 </div>
                 <div className="grid grid-rows-1 grid-cols-3 place-items-center items-center">
@@ -356,6 +382,9 @@ export default function Room(){
                     <div className="flex"><FaMagnifyingGlass/>
                     <Slider style={{width:100}} defaultValue={[20000/32]} max={5000} min={10000/32} step={1} 
                         className="pl-2" onValueChange={(value)=>{
+                            if(currentlyPlayingAudio.current||currentlyRecording.current){
+                                return value
+                            }
                             if(value<=5000){
                                 setZoomFactor(value*(32/10000))
                             }else{

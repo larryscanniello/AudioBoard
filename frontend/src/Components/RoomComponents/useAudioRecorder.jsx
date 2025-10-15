@@ -2,28 +2,16 @@
 import { useRef, useEffect, useState } from 'react';
 
 export const useAudioRecorder = (
-  {AudioCtxRef,
-  metronomeRef,
-  socket,
-  roomID,
-  setAudio,
-  setAudioChunks,
-  setAudioURL,
-  setDelayCompensation,
-  setDelayCompensationAudio,
-  onDelayCompensationComplete,
-  setMouseDragStart,
-  setMouseDragEnd,    
-  playheadRef,
-  metronomeOn,
-  waveformRef,
-  BPM
+  {AudioCtxRef, metronomeRef,socket, roomID, setAudio,
+  setAudioChunks,setAudioURL,setDelayCompensation, setDelayCompensationAudio, 
+  onDelayCompensationComplete, setMouseDragStart, setMouseDragEnd,    
+  playheadRef,metronomeOn,waveformRef,BPM,scrollWindowRef,currentlyRecording
 }
 ) => {
   const mediaRecorderRef = useRef(null);
   const delayCompensationRecorderRef = useRef(null);
   const streamRef = useRef(null);
-  const currentlyRecording = useRef(false);
+  
 
   // Initialize media stream and recorders
   useEffect(() => {
@@ -147,6 +135,15 @@ export const useAudioRecorder = (
                 const waveformCtx = waveformRef.current.getContext("2d");
                 const elapsed = AudioCtxRef.current.currentTime - now;
                 const x = (elapsed * pixelsPerSecond);
+                if(x>=waveformRef.current.width){
+                  stopRecording(metRef);
+                  return
+                }
+                const visibleStart = scrollWindowRef.current.scrollLeft
+                const visibleEnd = visibleStart + 1000
+                if((x-visibleStart)/(visibleEnd-visibleStart)>(10/11)){
+                    scrollWindowRef.current.scrollLeft = 750 + visibleStart;
+                }
                 waveformCtx.clearRect(0,0,rect.width,rect.height)
                 waveformCtx.fillStyle = "rgb(0,75,200)"
                 waveformCtx.globalAlpha = .20

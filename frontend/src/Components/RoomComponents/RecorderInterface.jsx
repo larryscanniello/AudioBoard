@@ -4,12 +4,11 @@ export default function RecorderInterface({
     audio,BPM,mouseDragEnd,zoomFactor,delayCompensation,
     measureTickRef,setIsDragging,mouseDragStart,audioCtxRef,
     waveformRef,playheadRef,isDragging,setMouseDragStart,
-    setMouseDragEnd,socket,roomID
+    setMouseDragEnd,socket,roomID,scrollWindowRef
 }){
 
-    const canvasContainerRef = useRef(null);
     const [movingPlayhead,setMovingPlayhead] = useState(false);
-    
+    const canvasContainerRef = useRef(null);
 
     useEffect(()=>{
         if(canvasContainerRef.current){
@@ -37,7 +36,7 @@ export default function RecorderInterface({
                 for(let i = 0; i <= 128; i++) {
                     if(audio){
                         if(i/128<bufferLength/audioLength){
-                            continue
+                            //continue
                         }
                     }
                     if(zoomFactor<8){
@@ -215,8 +214,8 @@ export default function RecorderInterface({
     }
 
 
-    return <div className="grid overflow-x-auto relative h-48"
-                style={{width:1000}}>
+    return <div className="grid overflow-x-auto relative h-48 border-black border-0 shadow-sm shadow-blak"
+                style={{width:1000}} ref={scrollWindowRef}>
                 <canvas className="h-10 row-start-1 col-start-2"
                     style={{width:Math.floor(1000*zoomFactor)}}
                     width={Math.floor(1000*zoomFactor)}
