@@ -35,7 +35,7 @@ export default function Room(){
     const [roomResponse,setRoomResponse] = useState(null);
     const [audioChunks,setAudioChunks] = useState([]);
     const playheadRef = useRef(null);
-    const [zoomFactor,setZoomFactor] = useState(8);
+    const [zoomFactor,setZoomFactor] = useState(2);
     const [delayCompensation,setDelayCompensation] = useState(0);
     const delayCompensationSourceRef = useRef(null);
     const measureTickRef = useRef(null);
@@ -354,7 +354,7 @@ export default function Room(){
                         </Button>
                     </ButtonGroup>
                     <div className="flex"><FaMagnifyingGlass/>
-                    <Slider style={{width:100}} defaultValue={[5000]} max={5000} min={10000/32} step={1} 
+                    <Slider style={{width:100}} defaultValue={[20000/32]} max={5000} min={10000/32} step={1} 
                         className="pl-2" onValueChange={(value)=>{
                             if(value<=5000){
                                 setZoomFactor(value*(32/10000))

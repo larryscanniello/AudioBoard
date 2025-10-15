@@ -28,8 +28,23 @@ export default function RecorderInterface({
                 //const sliceWidth = (WIDTH * 1.0) / 128.0;
                 //const samplesPerBeat = Math.floor(48000/(BPM/60))
                 const sliceWidth =  WIDTH / 128;  // Space between each of the 128 lines
-    
+                let audioLength, bufferLength;
+                if(audio){
+                    const dataArray = audio.getChannelData(0);
+                    bufferLength = dataArray.length;
+                    audioLength = audioCtxRef.current.sampleRate*128*(60/BPM)
+                }
                 for(let i = 0; i <= 128; i++) {
+                    if(audio){
+                        if(i/128<bufferLength/audioLength){
+                            continue
+                        }
+                    }
+                    if(zoomFactor<8){
+                        if(i%4>=1){
+                            continue
+                        }
+                    }
                     const x = Math.round(i * sliceWidth);   
                     canvasContainerCtx.moveTo(x, 0);
                     canvasContainerCtx.lineTo(x, HEIGHT);
@@ -57,15 +72,14 @@ export default function RecorderInterface({
             const sliceWidth = WIDTH/128;
             tickCtx.strokeStyle = "rgb(250,250,250)"
             tickCtx.lineWidth = 1;
-            tickCtx.font = "16px sans-serif";
+            tickCtx.font = "12px sans-serif";
             tickCtx.fillStyle = "#1a1a1a"; // or whatever your tick color scheme is
             for(let i=1;i<=128;i++){
                 tickCtx.moveTo(i*sliceWidth,HEIGHT);
                 if(i%4==0){
                     tickCtx.lineTo(i*sliceWidth,HEIGHT/2)
-                    if(i>4){
-                        tickCtx.fillText((i/4)-1, (i-4)*(sliceWidth)+(sliceWidth/12), 5*HEIGHT/6); 
-                    }
+                    tickCtx.fillText((i/4), (i-4)*(sliceWidth)+(2*sliceWidth/12), 4*HEIGHT/6); 
+
                 }else{
                     tickCtx.lineTo(i*sliceWidth,5*HEIGHT/6)
                 }
@@ -92,35 +106,59 @@ export default function RecorderInterface({
                     canvasCtx.strokeStyle = "rgb(0,0,0)";
                     canvasCtx.globalAlpha = 1.0
                     const sliceWidth = (WIDTH/128.0)/(audioCtxRef.current.sampleRate*(60/BPM));
-                    let x=0;
+                    const scaleFactor = (bufferLength-delayCompensation)/(audioCtxRef.current.sampleRate*128*(60/BPM));
+                    const samplesPerPixel = Math.ceil((bufferLength-delayCompensation) / (WIDTH*scaleFactor));
+                    const delay = delayCompensation*WIDTH/bufferLength
                     canvasCtx.beginPath();
-                    for(let i=0;i<bufferLength;i+=1){
-                        if(i===0){
-                            canvasCtx.moveTo(0,HEIGHT/2);
-                            x += sliceWidth;
-                            continue
+                    let lastx;
+                    for (let x = 0; x < WIDTH; x++) {
+                        const start = x * samplesPerPixel + delayCompensation;
+                        const end = Math.min(start + samplesPerPixel, bufferLength);
+                        let min = 1.0, max = -1.0;
+                        for (let i = start; i < end; i++) {
+                            const val = dataArray[i];
+                            if (val < min) min = val;
+                            if (val > max) max = val;
                         }
-                        if(i-delayCompensation<0){
-                            x += sliceWidth
-                            continue
+                        const y1 = ((1 + min) * HEIGHT) / 2;
+                        const y2 = ((1 + max) * HEIGHT) / 2;
+                        canvasCtx.moveTo(x, y1);
+                        canvasCtx.lineTo(x, y2);
+                        lastx = x;
+                        if(end==bufferLength){
+                            break
                         }
-                        const v = (dataArray[i]);
-                        const y = ((v+1) * HEIGHT)/2;
-                        canvasCtx.lineTo((i-delayCompensation)*sliceWidth,y);
-                        x += sliceWidth;
-                        
                     }
-                    //canvasCtx.lineTo(WIDTH,HEIGHT/2);
+                    canvasCtx.moveTo(0,HEIGHT/2)
+                    canvasCtx.lineTo(lastx,HEIGHT/2)
                     canvasCtx.stroke();
+                    /*for(let j=0;j<5;j++){
+                        for(let i=j*Math.floor(bufferLength/5);i<(j+1)*bufferLength/5;i+=1){
+                            if(i===j*Math.floor(bufferLength/5)){
+                                canvasCtx.moveTo(0,HEIGHT/2);
+                                x += sliceWidth;
+                                continue
+                            }
+                            if(i-delayCompensation<0){
+                                x += sliceWidth
+                                continue
+                            }
+                            const v = (dataArray[i]);
+                            const y = ((v+1) * HEIGHT)/2;
+                            canvasCtx.lineTo((i-delayCompensation)*sliceWidth,y);
+                            x += sliceWidth;
+                            
+                        }
+                        canvasCtx.stroke();
+                    }*/
+                    //canvasCtx.lineTo(WIDTH,HEIGHT/2);
+                    //console.log('check40',WIDTH,x)
+                    canvasCtx.stroke();
+                    console.log('check50')
                     //canvasCtx.fillStyle = "rgb(250, 190, 20)"
                     canvasCtx.fillStyle = "rgb(0,75,200)"
                     canvasCtx.globalAlpha = .15
-                    canvasCtx.fillRect(0,0,x,HEIGHT)
-                    canvasCtx.lineWidth = 2;
-                    canvasCtx.strokeStyle = "rgb(0,75,200)"
-                    canvasCtx.globalAlpha = 1
-                    //canvasCtx.strokeRect(0,0,x,HEIGHT);
-                    //canvasCtx.stroke()
+                    canvasCtx.fillRect(0,0,lastx,HEIGHT)
                     
                 }
                 drawWaveform();
