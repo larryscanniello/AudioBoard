@@ -336,8 +336,8 @@ export default function Room(){
 
     return <div className="">
         <div className="w-full grid place-items-center items-center">
-            <div className="grid h-80 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-gray-800 shadow-md"
-                style={{width:1100}}>
+            <div className="grid h-70 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-gray-800 shadow-md"
+                style={{width:1050}}>
                 <div className="grid place-items-center items-center">
                     <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
                                 delayCompensation={delayCompensation} measureTickRef={measureTickRef}
@@ -346,11 +346,11 @@ export default function Room(){
                                 playheadRef={playheadRef} isDragging={isDragging} setMouseDragStart={setMouseDragStart}
                                 setMouseDragEnd={setMouseDragEnd} socket={socket} roomID={roomID}
                                 scrollWindowRef={scrollWindowRef} playheadLocation={playheadLocation}
-                                setPlayheadLocation={setPlayheadLocation}
+                                setPlayheadLocation={setPlayheadLocation} audioURL={audioURL}
                                 />
                 </div>
-                <div className="grid grid-rows-1 grid-cols-3 place-items-center items-center">
-                    <ButtonGroup className="rounded border-1 border-gray-300">
+                <div className="grid grid-rows-1 grid-cols-20 place-items-center items-center" style={{height:40,padding:30}}>
+                    <ButtonGroup className="rounded border-1 border-gray-300 col-start-4">
                         <Button variant="default" size="lg" className="hover:bg-gray-800"
                             onClick={()=>{handlePlayAudio();socket.current.emit("client_to_server_play_audio",{roomID})}}>
                             <Play color={"lightgreen"} style={{width:20,height:20}}/> 
@@ -391,22 +391,23 @@ export default function Room(){
                             {BPM}
                         </Button>
                     </ButtonGroup>
-                    <div className="flex"><FaMagnifyingGlass/>
-                    <Slider style={{width:100}} defaultValue={[20000/32]} max={5000} min={10000/32} step={1} 
-                        className="pl-2" value={[zoomFactor*(10000/32)]} onValueChange={(value)=>{
-                            setZoomFactor(prev => {
-                                if(currentlyPlayingAudio.current||currentlyRecording.current){
-                                    return prev
-                                }
-                                const newZoomFactor = value*(32/10000)
-                                return newZoomFactor
-                            })
+                    <div className="flex col-start-9">
+                        <FaMagnifyingGlass/>
+                        <Slider style={{width:100}} defaultValue={[20000/32]} max={5000} min={10000/32} step={1} 
+                            className="pl-2" value={[zoomFactor*(10000/32)]} onValueChange={(value)=>{
+                                setZoomFactor(prev => {
+                                    if(currentlyPlayingAudio.current||currentlyRecording.current){
+                                        return prev
+                                    }
+                                    const newZoomFactor = value*(32/10000)
+                                    return newZoomFactor
+                                })
 
-                        }}>
-                    </Slider>
+                            }}>
+                        </Slider>
                     </div>
-                    <Popover >
-                        <PopoverTrigger className="hover:underline">Latency</PopoverTrigger>
+                    <Popover>
+                        <PopoverTrigger className="col-start-11 hover:underline">Latency</PopoverTrigger>
                         <PopoverContent onCloseAutoFocus={()=>setDisplayDelayCompensationMessage(false)}>
                             <div>Place your microphone near your speakers,
                                 turn your volume up,
@@ -434,15 +435,12 @@ export default function Room(){
 
                         </PopoverContent>
                     </Popover>
+                    {audio && <a download href={audioURL} className="col-start-13 hover:underline">
+                    Download
+                    </a>}
                 </div>
             </div>
         </div>
-        {audio && <div className="audio-container">
-                    <audio src={audioURL} controls></audio>
-                    <a download href={audioURL}>
-                    Download Recording
-                    </a>
-                </div>}
         
          </div>
 }
