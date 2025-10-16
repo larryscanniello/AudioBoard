@@ -5,7 +5,8 @@ export const useAudioRecorder = (
   {AudioCtxRef, metronomeRef,socket, roomID, setAudio,
   setAudioChunks,setAudioURL,setDelayCompensation, setDelayCompensationAudio, 
   onDelayCompensationComplete, setMouseDragStart, setMouseDragEnd,    
-  playheadRef,metronomeOn,waveformRef,BPM,scrollWindowRef,currentlyRecording
+  playheadRef,metronomeOn,waveformRef,BPM,scrollWindowRef,currentlyRecording,
+  setPlayheadLocation
 }
 ) => {
   const mediaRecorderRef = useRef(null);
@@ -134,6 +135,7 @@ export const useAudioRecorder = (
         const updatePlayhead = () => {
                 const waveformCtx = waveformRef.current.getContext("2d");
                 const elapsed = AudioCtxRef.current.currentTime - now;
+                setPlayheadLocation(elapsed);
                 const x = (elapsed * pixelsPerSecond);
                 if(x>=waveformRef.current.width){
                   stopRecording(metRef);

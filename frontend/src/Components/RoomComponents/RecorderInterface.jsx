@@ -4,7 +4,8 @@ export default function RecorderInterface({
     audio,BPM,mouseDragEnd,zoomFactor,delayCompensation,
     measureTickRef,setIsDragging,mouseDragStart,audioCtxRef,
     waveformRef,playheadRef,isDragging,setMouseDragStart,
-    setMouseDragEnd,socket,roomID,scrollWindowRef
+    setMouseDragEnd,socket,roomID,scrollWindowRef,
+    playheadLocation,setPlayheadLocation
 }){
 
     const [movingPlayhead,setMovingPlayhead] = useState(false);
@@ -131,30 +132,6 @@ export default function RecorderInterface({
                     canvasCtx.moveTo(0,HEIGHT/2)
                     canvasCtx.lineTo(lastx,HEIGHT/2)
                     canvasCtx.stroke();
-                    /*for(let j=0;j<5;j++){
-                        for(let i=j*Math.floor(bufferLength/5);i<(j+1)*bufferLength/5;i+=1){
-                            if(i===j*Math.floor(bufferLength/5)){
-                                canvasCtx.moveTo(0,HEIGHT/2);
-                                x += sliceWidth;
-                                continue
-                            }
-                            if(i-delayCompensation<0){
-                                x += sliceWidth
-                                continue
-                            }
-                            const v = (dataArray[i]);
-                            const y = ((v+1) * HEIGHT)/2;
-                            canvasCtx.lineTo((i-delayCompensation)*sliceWidth,y);
-                            x += sliceWidth;
-                            
-                        }
-                        canvasCtx.stroke();
-                    }*/
-                    //canvasCtx.lineTo(WIDTH,HEIGHT/2);
-                    //console.log('check40',WIDTH,x)
-                    canvasCtx.stroke();
-                    console.log('check50')
-                    //canvasCtx.fillStyle = "rgb(250, 190, 20)"
                     canvasCtx.fillStyle = "rgb(0,75,200)"
                     canvasCtx.globalAlpha = .15
                     canvasCtx.fillRect(0,0,lastx,HEIGHT)
@@ -183,13 +160,13 @@ export default function RecorderInterface({
         
         const x = e.clientX-rect.left
         if(Math.abs(mouseDragStart.xactual-x)<rect.width/128/4){
-            playheadRef.current.style.transform = `translateX(${mouseDragStart.xactual}px)`
+            setPlayheadLocation(mouseDragStart.xactual/pxPerSecond)
             setMouseDragEnd(null);
             socket.current.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd:null,roomID})
         }else{
             const start = rect.width*Math.ceil(x*128/rect.width)/128
             const pos = {x:start, y: e.clientY - rect.top}
-            playheadRef.current.style.transform = `translateX(${mouseDragStart.x}px)`;
+            setPlayheadLocation(mouseDragStart.x/pxPerSecond)
             setMouseDragEnd(pos);
             socket.current.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd:pos,roomID})
         }    
@@ -204,7 +181,7 @@ export default function RecorderInterface({
         if(movingPlayhead){
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
-            playheadRef.current.style.transform = `translateX(${x}px)`;
+            setPlayheadLocation(x/pxPerSecond);
             setMouseDragStart({x,xactual:x})
         }
     }
@@ -213,6 +190,8 @@ export default function RecorderInterface({
         setMovingPlayhead(false);
     }
 
+    const pxPerSecond = Math.floor(1000*zoomFactor)/(128*60/BPM)
+    const playheadPx = playheadLocation*pxPerSecond
 
     return <div className="grid overflow-x-auto relative h-48 border-black border-0 shadow-sm shadow-blak"
                 style={{width:1000}} ref={scrollWindowRef}>
@@ -250,7 +229,7 @@ export default function RecorderInterface({
                     style={{position:"absolute",
                         top:0,bottom:0,
                         width:"2px",background:"red",
-                        transform:"translateX(0)"
+                        transform:`translateX(${playheadPx}px)`
                     }}
                         >
                 </div>
