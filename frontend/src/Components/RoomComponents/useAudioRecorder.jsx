@@ -67,8 +67,6 @@ export const useAudioRecorder = (
           setMouseDragStart({x:0,xactual:0});
           setMouseDragEnd(null);
           playheadRef.current.style.transform = "translateX(0)";
-          
-          
           chunks = [];
         };
 
@@ -150,7 +148,6 @@ export const useAudioRecorder = (
                 waveformCtx.fillStyle = "rgb(0,75,200)"
                 waveformCtx.globalAlpha = .20
                 waveformCtx.fillRect(0,0,x,rect.height)
-                playheadRef.current.style.transform = `translateX(${x}px)`;
                 if(currentlyRecording.current){
                     requestAnimationFrame(updatePlayhead);
                 }

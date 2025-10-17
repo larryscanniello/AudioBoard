@@ -5,7 +5,7 @@ import Metronome from "../../Classes/Metronome"
 import { useAudioRecorder } from "./useAudioRecorder";
 import RecorderInterface from "./recorderInterface";
 import { Button } from "@/components/ui/button"
-import { Play, Square, Circle,SkipBack } from "lucide-react"
+import { Play, Square, Circle,SkipBack,Lock,LockOpen,Columns4,Magnet } from "lucide-react"
 import {
   ButtonGroup,
   ButtonGroupSeparator,
@@ -54,6 +54,7 @@ export default function Room(){
     const scrollWindowRef = useRef(null);
     const currentlyRecording = useRef(false);
     const [playheadLocation,setPlayheadLocation] = useState(0);
+    const [snapToGrid,setSnapToGrid] = useState(false);
     const {startRecording,
         stopRecording,
         startDelayCompensationRecording,
@@ -198,59 +199,56 @@ export default function Room(){
             currentlyPlayingAudio.current=false;
         }
         const rect = waveformRef.current.getBoundingClientRect();
+        const pixelsPerSecond = rect.width/((60/BPM)*128)
         const totalTime = (128*60/BPM)
         const duration = source.buffer.length/AudioCtxRef.current.sampleRate;
-        const waveformWidth = rect.width
         let startTime = 0;
         let endTime = duration;
         let timeToNextMeasure = 0;
         
         if(mouseDragStart&&!mouseDragEnd){
-            startTime = totalTime * mouseDragStart.xactual/ waveformRef.current.width;
-            const nextBeat = 128*mouseDragStart.xactual/waveformRef.current.width
+            startTime = totalTime * mouseDragStart.xactual*pixelsPerSecond/waveformRef.current.width;
+            const nextBeat = 128*mouseDragStart.xactual*pixelsPerSecond/waveformRef.current.width
             metronomeRef.current.currentBeatInBar = Math.ceil(nextBeat)%4
             const beatFractionToNextMeasure = Math.ceil(nextBeat)-nextBeat
             const secondsPerBeat = (60/BPM)
             timeToNextMeasure = beatFractionToNextMeasure * secondsPerBeat
         }else if(mouseDragStart&&mouseDragEnd){
-            startTime = totalTime * mouseDragStart.x/ waveformRef.current.width;
-            metronomeRef.current.currentBeatInBar = Math.floor(128*mouseDragStart.x/waveformRef.current.width)%4
+            startTime = totalTime * mouseDragStart.x*pixelsPerSecond/ waveformRef.current.width;
+            metronomeRef.current.currentBeatInBar = Math.floor(128*mouseDragStart.x*pixelsPerSecond/waveformRef.current.width)%4
         }
         if(mouseDragEnd){
-            endTime = totalTime * mouseDragEnd.x/ waveformRef.current.width;
+            endTime = totalTime * mouseDragEnd.x*pixelsPerSecond/ waveformRef.current.width;
         }
         let endTimeabsolute = AudioCtxRef.current.currentTime + (duration-startTime);
         let now = AudioCtxRef.current.currentTime;
-        const pixelsPerSecond = rect.width/((60/BPM)*128)
         const updatePlayhead = (start) => {
             const elapsed = AudioCtxRef.current.currentTime - now;
             setPlayheadLocation(start/pixelsPerSecond+elapsed);
             const x = start+(elapsed * pixelsPerSecond);
-            if(x>=rect.width){
+            /*if(x>=rect.width){
                 metronomeRef.current.stop();
                 return
-            }
+            }*/
             const visibleStart = scrollWindowRef.current.scrollLeft
             const visibleEnd = visibleStart + 1000
             if((x-visibleStart)/(visibleEnd-visibleStart)>(10/11)){
                 scrollWindowRef.current.scrollLeft = 750 + visibleStart;
             }
-            if(AudioCtxRef.current.currentTime<now+endTime&&currentlyPlayingAudio.current){
+            if(playheadLocation<(endTime-delayCompensation)&&currentlyPlayingAudio.current){
                 requestAnimationFrame(()=>{updatePlayhead(start)});
-            }else if(AudioCtxRef.current.currentTime>=endTimeabsolute){
-                console.log('c1')
+            }else if(!mouseDragEnd){
                 metronomeRef.current.stop();
                 setMouseDragStart({x:0,xactual:0})
                 setMouseDragEnd(null)
                 setPlayheadLocation(0)
             }else{
                 metronomeRef.current.stop();
-                setMouseDragStart({x:Math.floor(x),xactual:x})
-                setMouseDragEnd(null);
+                setPlayheadLocation(start/pixelsPerSecond)
             }
             
         }
-        let start = mouseDragEnd ? mouseDragStart.x : mouseDragStart ? mouseDragStart.xactual : 0
+        let start = (mouseDragStart ? snapToGrid ? mouseDragStart.x : mouseDragStart.xactual : 0)*pixelsPerSecond
         const secondsToDelay = delayCompensation/AudioCtxRef.current.sampleRate
         if(startTime+secondsToDelay>=audio.getChannelData(0).length/AudioCtxRef.current.sampleRate){
             startTime = 0;
@@ -263,9 +261,7 @@ export default function Room(){
         if(metronomeOn){
             metronomeRef.current.start(now+timeToNextMeasure);
         }
-        
         source.start(0,startTime+secondsToDelay,endTime-startTime)
-        
         playingAudioRef.current = source;
         currentlyPlayingAudio.current = true;
         updatePlayhead(start)
@@ -347,6 +343,7 @@ export default function Room(){
                                 setMouseDragEnd={setMouseDragEnd} socket={socket} roomID={roomID}
                                 scrollWindowRef={scrollWindowRef} playheadLocation={playheadLocation}
                                 setPlayheadLocation={setPlayheadLocation} audioURL={audioURL}
+                                snapToGrid={snapToGrid}
                                 />
                 </div>
                 <div className="grid grid-rows-1 grid-cols-20 place-items-center items-center" style={{height:40,padding:30}}>
@@ -393,12 +390,13 @@ export default function Room(){
                     </ButtonGroup>
                     <div className="flex col-start-9">
                         <FaMagnifyingGlass/>
-                        <Slider style={{width:100}} defaultValue={[20000/32]} max={5000} min={10000/32} step={1} 
-                            className="pl-2" value={[zoomFactor*(10000/32)]} onValueChange={(value)=>{
+                        <Slider style={{width:100}}
+                        defaultValue={[20000/32]} max={5000} min={10000/32} step={1} 
+                            className="pl-2 group" value={[zoomFactor*(10000/32)]} onValueChange={(value)=>{
                                 setZoomFactor(prev => {
-                                    if(currentlyPlayingAudio.current||currentlyRecording.current){
+                                    /*if(currentlyPlayingAudio.current||currentlyRecording.current){
                                         return prev
-                                    }
+                                    }*/
                                     const newZoomFactor = value*(32/10000)
                                     return newZoomFactor
                                 })
@@ -408,7 +406,7 @@ export default function Room(){
                     </div>
                     <Popover>
                         <PopoverTrigger className="col-start-11 hover:underline">Latency</PopoverTrigger>
-                        <PopoverContent onCloseAutoFocus={()=>setDisplayDelayCompensationMessage(false)}>
+                        <PopoverContent onCloseAutoFocus={()=>setDisplayDelayCompensationMessage(false)} style={{transform:"translateY(-100%)"}}>
                             <div>Place your microphone near your speakers,
                                 turn your volume up,
                             then hit the record button.</div>  
@@ -435,9 +433,13 @@ export default function Room(){
 
                         </PopoverContent>
                     </Popover>
-                    {audio && <a download href={audioURL} className="col-start-13 hover:underline">
+                    <a download href={audioURL} className={"col-start-13 " + (audio ? "hover:underline" : "opacity-25")}>
                     Download
-                    </a>}
+                    </a>
+                    <Button variant="default" size="lg" onClick={()=>setSnapToGrid(prev=>!prev)} className="col-start-15 border-1 border-gray-300 hover:bg-gray-800">
+                        <Magnet color={snapToGrid ? "lightblue" : "white"} style={{transform:"rotate(315deg)"}}></Magnet>
+                        <Columns4 color={snapToGrid ? "lightblue" : "white"}></Columns4>
+                    </Button>
                 </div>
             </div>
         </div>
