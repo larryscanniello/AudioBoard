@@ -235,7 +235,7 @@ export default function Room(){
             if((x-visibleStart)/(visibleEnd-visibleStart)>(10/11)){
                 scrollWindowRef.current.scrollLeft = 750 + visibleStart;
             }
-            if(playheadLocation<(endTime-delayCompensation)&&currentlyPlayingAudio.current){
+            if(playheadLocation<(endTime-secondsToDelay)&&currentlyPlayingAudio.current){
                 requestAnimationFrame(()=>{updatePlayhead(start)});
             }else if(!mouseDragEnd){
                 metronomeRef.current.stop();

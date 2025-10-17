@@ -88,7 +88,6 @@ export default function RecorderInterface({
             const WIDTH = waveformRef.current.width;
             const HEIGHT = waveformRef.current.height;
             canvasCtx.clearRect(0,0,WIDTH,HEIGHT);   
-
             if(audio){
                 const dataArray = audio.getChannelData(0);
                 const bufferLength = dataArray.length;
@@ -96,6 +95,7 @@ export default function RecorderInterface({
                     canvasCtx.fillStyle = "rgb(75,75,75)"
                     canvasCtx.fillRect(mouseDragStart.xactual,0,mouseDragEnd.xactual-mouseDragStart.xactual,HEIGHT)
                 }*/
+               canvasCtx.globalAlpha = .2
                 if(mouseDragEnd&&snapToGrid){
                     canvasCtx.fillStyle = "rgb(75,75,75)"
                     canvasCtx.fillRect(mouseDragStart.x*pxPerSecond,0,(mouseDragEnd.x-mouseDragStart.x)*pxPerSecond,HEIGHT)
@@ -141,8 +141,8 @@ export default function RecorderInterface({
                     canvasCtx.moveTo(0,HEIGHT/2)
                     canvasCtx.lineTo(lastx,HEIGHT/2)
                     canvasCtx.stroke();
-                    canvasCtx.fillStyle = "rgb(0,75,200)"
-                    canvasCtx.globalAlpha = .15
+                    canvasCtx.fillStyle = "rgb(0,125,225)"
+                    canvasCtx.globalAlpha = .12
                     canvasCtx.fillRect(0,0,lastx,HEIGHT)
                     
                 }
@@ -154,7 +154,6 @@ export default function RecorderInterface({
     },[audio,BPM,mouseDragStart,mouseDragEnd,zoomFactor,delayCompensation]);
 
     const handleCanvasMouseDown = (e) => {
-        console.log('c5')
         const rect = waveformRef.current.getBoundingClientRect();
         const x = (e.clientX-rect.left)
         const start = rect.width*Math.floor(x*128/rect.width)/128;
@@ -195,22 +194,24 @@ export default function RecorderInterface({
     };
 
     const handleMovePlayhead = (e) => {
-        setMovingPlayhead(true);
-    }    
 
-    const handleMouseMovePlayhead = (e) => {
-        if(movingPlayhead){
+        const handleMouseMove = (e) => {
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
             setPlayheadLocation(x/pxPerSecond);
-            setMouseDragStart({x:x/pxPerSecond,xactual:x/pxPerSecond})
+            const xrounded = rect.width*Math.floor(x*128/rect.width)/128
+            setMouseDragStart({x:xrounded/pxPerSecond,xactual:x/pxPerSecond})
         }
-    }
 
-    const handleMouseUpMovePlayhead = () => {
-        setMovingPlayhead(false);
-    }
-    
+        const handleMouseUp = (e) => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", handleMouseUp);
+        };
+
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+
+    }    
 
     return <div className="grid overflow-x-auto relative h-48 border-black border-0 shadow-sm shadow-blak"
                 style={{width:1000}} ref={scrollWindowRef}>
@@ -243,8 +244,6 @@ export default function RecorderInterface({
                 </div>*/}
                 <div ref={playheadRef}
                     onMouseDown={handleMovePlayhead}
-                    onMouseMove={handleMouseMovePlayhead}
-                    onMouseUp={handleMouseUpMovePlayhead}
                     style={{position:"absolute",
                         top:0,bottom:0,
                         width:"2px",background:"red",
