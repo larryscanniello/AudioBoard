@@ -205,27 +205,27 @@ export default function Room(){
         let startTime = 0;
         let endTime = Math.min(duration,totalTime);
         let timeToNextMeasure = 0;
-        
-        if(mouseDragStart&&!mouseDragEnd){
+        if(mouseDragStart&&(!mouseDragEnd||!snapToGrid)){
             startTime = totalTime * mouseDragStart.xactual*pixelsPerSecond/waveformRef.current.width;
             const nextBeat = 128*mouseDragStart.xactual*pixelsPerSecond/waveformRef.current.width
             metronomeRef.current.currentBeatInBar = Math.ceil(nextBeat)%4
             const beatFractionToNextMeasure = Math.ceil(nextBeat)-nextBeat
             const secondsPerBeat = (60/BPM)
             timeToNextMeasure = beatFractionToNextMeasure * secondsPerBeat
-        }else if(mouseDragStart&&mouseDragEnd){
+        }else if(mouseDragStart&&mouseDragEnd&&snapToGrid){
             startTime = totalTime * mouseDragStart.x*pixelsPerSecond/ waveformRef.current.width;
             metronomeRef.current.currentBeatInBar = Math.floor(128*mouseDragStart.x*pixelsPerSecond/waveformRef.current.width)%4
         }
-        if(mouseDragEnd){
-            endTime = totalTime * mouseDragEnd.x*pixelsPerSecond/ waveformRef.current.width;
+        if(mouseDragEnd&&!snapToGrid){
+            endTime = totalTime * Math.min(1,mouseDragEnd.xactual*pixelsPerSecond/ waveformRef.current.width);
+        }else if(mouseDragEnd&&snapToGrid){
+            endTime = totalTime * Math.min(1,mouseDragEnd.x*pixelsPerSecond/ waveformRef.current.width);
         }
-        let endTimeabsolute = AudioCtxRef.current.currentTime + (duration-startTime);
         let now = AudioCtxRef.current.currentTime;
         const updatePlayhead = (start) => {
             const elapsed = AudioCtxRef.current.currentTime - now;
-            setPlayheadLocation(start/pixelsPerSecond+elapsed);
-            const x = start+(elapsed * pixelsPerSecond);
+            setPlayheadLocation(start+elapsed);
+            const x = (start+elapsed) * pixelsPerSecond;
             /*if(x>=rect.width){
                 metronomeRef.current.stop();
                 return
@@ -235,7 +235,7 @@ export default function Room(){
             if((x-visibleStart)/(visibleEnd-visibleStart)>(10/11)){
                 scrollWindowRef.current.scrollLeft = 750 + visibleStart;
             }
-            if(playheadLocation<(endTime-secondsToDelay)&&currentlyPlayingAudio.current){
+            if(start+elapsed<(endTime-secondsToDelay)&&currentlyPlayingAudio.current){
                 requestAnimationFrame(()=>{updatePlayhead(start)});
             }else if(!mouseDragEnd){
                 metronomeRef.current.stop();
@@ -244,11 +244,10 @@ export default function Room(){
                 setPlayheadLocation(0)
             }else{
                 metronomeRef.current.stop();
-                setPlayheadLocation(start/pixelsPerSecond)
+                setPlayheadLocation(start)
             }
             
         }
-        let start = (mouseDragStart ? snapToGrid ? mouseDragStart.x : mouseDragStart.xactual : 0)*pixelsPerSecond
         const secondsToDelay = delayCompensation/AudioCtxRef.current.sampleRate
         if(startTime+secondsToDelay>=audio.getChannelData(0).length/AudioCtxRef.current.sampleRate){
             startTime = 0;
@@ -264,7 +263,8 @@ export default function Room(){
         source.start(0,startTime+secondsToDelay,endTime-startTime)
         playingAudioRef.current = source;
         currentlyPlayingAudio.current = true;
-        updatePlayhead(start)
+        console.log(startTime)
+        updatePlayhead(startTime)
     }
 
     const SetDelayCompensation = () => {

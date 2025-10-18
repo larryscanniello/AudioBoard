@@ -159,7 +159,7 @@ export default function RecorderInterface({
             }
             }
     
-    },[audio,BPM,mouseDragStart,mouseDragEnd,zoomFactor,delayCompensation]);
+    },[audio,BPM,mouseDragStart,mouseDragEnd,zoomFactor,delayCompensation,snapToGrid]);
 
     const handleCanvasMouseDown = (e) => {
 
@@ -266,7 +266,7 @@ export default function RecorderInterface({
                 {/*<div style={{width:}} className="h-40 row-start-2 col-start-2 bg-amber-300 opacity-30">
 
                 </div>*/}
-                <div ref={playheadRef}
+                {/*<div ref={playheadRef}
                     onMouseDown={handleMovePlayhead}
                     style={{position:"absolute",
                         top:0,bottom:0,
@@ -274,6 +274,26 @@ export default function RecorderInterface({
                         transform:`translateX(${playheadPx}px)`
                     }}
                         >
-                </div>
+                </div>*/}
+                {<div ref={playheadRef} style={{position:"absolute",top:0,bottom:0,
+                    width:"4px", transform:`translateX(${playheadPx}px)`}}
+                    onMouseDown={handleMovePlayhead}
+                    className="flex flex-col items-center">
+                    <div style={{
+                            width: "8px",
+                            height: "8px",
+                            borderRadius: "50%",
+                            background: "red",
+                            marginTop: "33px",
+                            }}>
+
+                    </div>
+                    <div
+                    style={{
+                        position:"absolute",top:40,bottom:0,
+                        width:"2px",background:"red",
+                    }}
+                    ></div>
+                </div>}
             </div> 
 }
