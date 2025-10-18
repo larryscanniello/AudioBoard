@@ -203,7 +203,7 @@ export default function Room(){
         const totalTime = (128*60/BPM)
         const duration = source.buffer.length/AudioCtxRef.current.sampleRate;
         let startTime = 0;
-        let endTime = duration;
+        let endTime = Math.min(duration,totalTime);
         let timeToNextMeasure = 0;
         
         if(mouseDragStart&&!mouseDragEnd){
@@ -319,7 +319,7 @@ export default function Room(){
 
         window.addEventListener("mousemove", handleMouseMove);
         window.addEventListener("mouseup", handleMouseUp);
-};
+    };
 
     const handleSkipBack = () => {
         setMouseDragEnd(null);
