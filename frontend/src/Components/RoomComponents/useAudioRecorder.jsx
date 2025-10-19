@@ -128,12 +128,13 @@ export const useAudioRecorder = (
         }
         mediaRecorderRef.current.start();
         const now = AudioCtxRef.current.currentTime
-        const rect = waveformRef.current.getBoundingClientRect();
-        const pixelsPerSecond = rect.width/((60/BPM)*128)
+        
         const updatePlayhead = () => {
+                const rect = waveformRef.current.getBoundingClientRect();
+                const pixelsPerSecond = rect.width/((60/BPM)*128)
                 const waveformCtx = waveformRef.current.getContext("2d");
                 const elapsed = AudioCtxRef.current.currentTime - now;
-                setPlayheadLocation(elapsed);
+                setPlayheadLocation(elapsed);                
                 const x = (elapsed * pixelsPerSecond);
                 if(x>=waveformRef.current.width){
                   stopRecording(metRef);

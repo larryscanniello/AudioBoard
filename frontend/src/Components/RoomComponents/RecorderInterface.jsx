@@ -179,7 +179,9 @@ export default function RecorderInterface({
         if(isDragging){
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
-            setMouseDragEnd({xactual:x/pxPerSecond,x:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond});
+            if(Math.abs(mouseDragStart.xactual*pxPerSecond-x)>5){
+                setMouseDragEnd({xactual:x/pxPerSecond,x:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond});
+            }
         }
     }
 
@@ -187,7 +189,7 @@ export default function RecorderInterface({
         if (!isDragging) return;
         const rect = waveformRef.current.getBoundingClientRect();
         const x = e.clientX-rect.left
-        if(Math.abs(mouseDragStart.xactual*pxPerSecond-x)<rect.width/128/4){
+        if(Math.abs(mouseDragStart.xactual*pxPerSecond-x)<=5){
             setPlayheadLocation(mouseDragStart.xactual)
             setMouseDragEnd(null);
             socket.current.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd:null,roomID})
