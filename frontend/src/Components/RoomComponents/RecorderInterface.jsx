@@ -1,4 +1,6 @@
 import { useEffect,useRef,useState } from "react";
+import { Button } from "@/components/ui/button"
+import { Magnet,Columns4 } from "lucide-react";
 
 export default function RecorderInterface({
     audio,BPM,mouseDragEnd,zoomFactor,delayCompensation,
@@ -6,7 +8,7 @@ export default function RecorderInterface({
     waveformRef,playheadRef,isDragging,setMouseDragStart,
     setMouseDragEnd,socket,roomID,scrollWindowRef,
     playheadLocation,setPlayheadLocation,snapToGrid,
-    currentlyPlayingAudio
+    currentlyPlayingAudio,setSnapToGrid
 }){
 
     const [movingPlayhead,setMovingPlayhead] = useState(false);
@@ -261,6 +263,12 @@ export default function RecorderInterface({
 
     return <div className="grid overflow-x-auto relative border-black border-0 shadow-sm shadow-blak"
                 style={{width:1000,height:150}} ref={scrollWindowRef}>
+                <Button variant="default" size="lg" onClick={()=>setSnapToGrid(prev=>!prev)} 
+                    className="absolute border-1 row-start-2 border-gray-300 hover:bg-gray-800"
+                    style={{right:-6,top:76,transform:"scale(.7)"}}>
+                    <Magnet color={snapToGrid ? "lightblue" : "white"} style={{transform:"rotate(315deg) scale(1.5)"}}></Magnet>
+                    <Columns4 color={snapToGrid ? "lightblue" : "white"} style={{transform:"scale(1.5)"}}></Columns4>
+                </Button>
                 <canvas className="row-start-1 col-start-2"
                     style={{width:Math.floor(1000*zoomFactor),height:35}}
                     width={Math.floor(1000*zoomFactor)}

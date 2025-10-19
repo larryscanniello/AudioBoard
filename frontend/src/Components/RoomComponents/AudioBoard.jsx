@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/popover"
 import { FaMagnifyingGlass } from "react-icons/fa6";
 
-export default function Room(){
+export default function AudioBoard(){
 
     const playrecordingbuttonref = useRef(null);
     const [audioURL,setAudioURL] = useState(null);
@@ -55,7 +55,7 @@ export default function Room(){
     const scrollWindowRef = useRef(null);
     const currentlyRecording = useRef(false);
     const [playheadLocation,setPlayheadLocation] = useState(0);
-    const [snapToGrid,setSnapToGrid] = useState(false);
+    const [snapToGrid,setSnapToGrid] = useState(true);
     const [compactMode,setCompactMode] = useState(false);
     const {startRecording,
         stopRecording,
@@ -345,14 +345,11 @@ export default function Room(){
                                 scrollWindowRef={scrollWindowRef} playheadLocation={playheadLocation}
                                 setPlayheadLocation={setPlayheadLocation} audioURL={audioURL}
                                 snapToGrid={snapToGrid} currentlyPlayingAudio={currentlyPlayingAudio}
-                                />
+                                setSnapToGrid={setSnapToGrid}
+                    />
+                    
                 </div>
-                <Button variant="default" size="lg" onClick={()=>setSnapToGrid(prev=>!prev)} 
-                className="absolute border-1 row-start-2 border-gray-300 hover:bg-gray-800"
-                style={{right:130,top:175,transform:"scale(.7)"}}>
-                        <Magnet color={snapToGrid ? "lightblue" : "white"} style={{transform:"rotate(315deg) scale(1.5)"}}></Magnet>
-                        <Columns4 color={snapToGrid ? "lightblue" : "white"} style={{transform:"scale(1.5)"}}></Columns4>
-                    </Button>
+                
                 <div className="row-start-3 h-8 grid grid-cols-[20px_375px_125px_125px_125px_125px]" >
                     <ButtonGroup className="rounded border-1 border-gray-300 col-start-2">
                         <Button variant="default" size="lg" className="hover:bg-gray-800"
