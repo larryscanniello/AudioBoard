@@ -5,7 +5,8 @@ import Metronome from "../../Classes/Metronome"
 import { useAudioRecorder } from "./useAudioRecorder";
 import RecorderInterface from "./recorderInterface";
 import { Button } from "@/components/ui/button"
-import { Play, Square, Circle,SkipBack,Lock,LockOpen,Columns4,Magnet } from "lucide-react"
+import { Play, Square, Circle,SkipBack,Lock,LockOpen,
+    Columns4,Magnet,ChevronsDownUp,ChevronsUpDown } from "lucide-react"
 import {
   ButtonGroup,
   ButtonGroupSeparator,
@@ -55,6 +56,7 @@ export default function Room(){
     const currentlyRecording = useRef(false);
     const [playheadLocation,setPlayheadLocation] = useState(0);
     const [snapToGrid,setSnapToGrid] = useState(false);
+    const [compactMode,setCompactMode] = useState(false);
     const {startRecording,
         stopRecording,
         startDelayCompensationRecording,
@@ -192,6 +194,7 @@ export default function Room(){
     }
 
     const handlePlayAudio = () => {
+        if(!audio) return;
         const source = AudioCtxRef.current.createBufferSource();
         source.buffer = audio;
         source.connect(AudioCtxRef.current.destination);
@@ -226,16 +229,12 @@ export default function Room(){
             const elapsed = AudioCtxRef.current.currentTime - now;
             setPlayheadLocation(start+elapsed);
             const x = (start+elapsed) * pixelsPerSecond;
-            /*if(x>=rect.width){
-                metronomeRef.current.stop();
-                return
-            }*/
             const visibleStart = scrollWindowRef.current.scrollLeft
             const visibleEnd = visibleStart + 1000
             if((x-visibleStart)/(visibleEnd-visibleStart)>(10/11)){
                 scrollWindowRef.current.scrollLeft = 750 + visibleStart;
             }
-            if(start+elapsed<(endTime-secondsToDelay)&&currentlyPlayingAudio.current){
+            if(start+elapsed<endTime&&currentlyPlayingAudio.current){
                 requestAnimationFrame(()=>{updatePlayhead(start)});
             }else if(!mouseDragEnd){
                 metronomeRef.current.stop();
@@ -334,9 +333,9 @@ export default function Room(){
 
     return <div className="">
         <div className="w-full grid place-items-center items-center">
-            <div className="grid h-70 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-gray shadow-md"
+            <div className="grid grid-rows-[1px_172px] h-58 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-gray shadow-md"
                 style={{width:1050}}>
-                <div className="grid place-items-center items-center">
+                <div className="row-start-2 grid place-items-center items-center h-43">
                     <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
                                 delayCompensation={delayCompensation} measureTickRef={measureTickRef}
                                 setIsDragging={setIsDragging} mouseDragStart={mouseDragStart}
@@ -345,11 +344,17 @@ export default function Room(){
                                 setMouseDragEnd={setMouseDragEnd} socket={socket} roomID={roomID}
                                 scrollWindowRef={scrollWindowRef} playheadLocation={playheadLocation}
                                 setPlayheadLocation={setPlayheadLocation} audioURL={audioURL}
-                                snapToGrid={snapToGrid}
+                                snapToGrid={snapToGrid} currentlyPlayingAudio={currentlyPlayingAudio}
                                 />
                 </div>
-                <div className="grid grid-rows-1 grid-cols-20 place-items-center items-center" style={{height:40,padding:30}}>
-                    <ButtonGroup className="rounded border-1 border-gray-300 col-start-4">
+                <Button variant="default" size="lg" onClick={()=>setSnapToGrid(prev=>!prev)} 
+                className="absolute border-1 row-start-2 border-gray-300 hover:bg-gray-800"
+                style={{right:130,top:175,transform:"scale(.7)"}}>
+                        <Magnet color={snapToGrid ? "lightblue" : "white"} style={{transform:"rotate(315deg) scale(1.5)"}}></Magnet>
+                        <Columns4 color={snapToGrid ? "lightblue" : "white"} style={{transform:"scale(1.5)"}}></Columns4>
+                    </Button>
+                <div className="row-start-3 h-8 grid grid-cols-[20px_375px_125px_125px_125px_125px]" >
+                    <ButtonGroup className="rounded border-1 border-gray-300 col-start-2">
                         <Button variant="default" size="lg" className="hover:bg-gray-800"
                             onClick={()=>{
                                 if(!currentlyPlayingAudio.current&&!currentlyRecording.current){
@@ -403,8 +408,8 @@ export default function Room(){
                             {BPM}
                         </Button>
                     </ButtonGroup>
-                    <div className="flex col-start-9">
-                        <FaMagnifyingGlass/>
+                    <div className="flex flex-row items-center col-start-3">
+                        <FaMagnifyingGlass style={{transform:"scale(1.1)",marginRight:3}} className=""/>
                         <Slider style={{width:100}}
                         defaultValue={[20000/32]} max={5000} min={10000/32} step={1} 
                             className="pl-2 group" value={[zoomFactor*(10000/32)]} onValueChange={(value)=>{
@@ -420,7 +425,7 @@ export default function Room(){
                         </Slider>
                     </div>
                     <Popover>
-                        <PopoverTrigger className="col-start-11 hover:underline">Latency</PopoverTrigger>
+                        <PopoverTrigger className="col-start-4 hover:underline">Latency</PopoverTrigger>
                         <PopoverContent onCloseAutoFocus={()=>setDisplayDelayCompensationMessage(false)} style={{transform:"translateY(-100%)"}}>
                             <div>Place your microphone near your speakers,
                                 turn your volume up,
@@ -448,13 +453,10 @@ export default function Room(){
 
                         </PopoverContent>
                     </Popover>
-                    <a download href={audioURL} className={"col-start-13 " + (audio ? "hover:underline" : "opacity-25")}>
+                    <a download href={audioURL} className={"flex items-center col-start-5 " + (audio ? "hover:underline" : "opacity-25")}>
                     Download
                     </a>
-                    <Button variant="default" size="lg" onClick={()=>setSnapToGrid(prev=>!prev)} className="col-start-15 border-1 border-gray-300 hover:bg-gray-800">
-                        <Magnet color={snapToGrid ? "lightblue" : "white"} style={{transform:"rotate(315deg)"}}></Magnet>
-                        <Columns4 color={snapToGrid ? "lightblue" : "white"}></Columns4>
-                    </Button>
+                    
                 </div>
             </div>
         </div>

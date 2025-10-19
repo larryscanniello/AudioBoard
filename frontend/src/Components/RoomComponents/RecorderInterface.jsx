@@ -5,7 +5,8 @@ export default function RecorderInterface({
     measureTickRef,setIsDragging,mouseDragStart,audioCtxRef,
     waveformRef,playheadRef,isDragging,setMouseDragStart,
     setMouseDragEnd,socket,roomID,scrollWindowRef,
-    playheadLocation,setPlayheadLocation,snapToGrid
+    playheadLocation,setPlayheadLocation,snapToGrid,
+    currentlyPlayingAudio
 }){
 
     const [movingPlayhead,setMovingPlayhead] = useState(false);
@@ -162,7 +163,7 @@ export default function RecorderInterface({
     },[audio,BPM,mouseDragStart,mouseDragEnd,zoomFactor,delayCompensation,snapToGrid]);
 
     const handleCanvasMouseDown = (e) => {
-
+        if(currentlyPlayingAudio.current) return;
         const rect = waveformRef.current.getBoundingClientRect();
         const x = (e.clientX-rect.left)
         const start = rect.width*Math.floor(x*128/rect.width)/128;
@@ -220,24 +221,31 @@ export default function RecorderInterface({
         const handleMouseMove = (e) => {
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
+            
             if(mouseDragEnd){
                 if((!snapToGrid && e.clientX-rect.x>mouseDragEnd.xactual*pxPerSecond)||(snapToGrid&&e.clientX-rect.x>mouseDragEnd.x*pxPerSecond)){
                     return             
                 }
+                
             }
-            setPlayheadLocation(x/pxPerSecond);
+            if(x<0){
+                setPlayheadLocation(0);
+            }
+            else if(x>rect.width){
+                setPlayheadLocation(rect.width/pxPerSecond)
+            }else{
+                setPlayheadLocation(x/pxPerSecond);
+            }
             const xrounded = rect.width*Math.floor(x*128/rect.width)/128
             setMouseDragStart({x:xrounded/pxPerSecond,xactual:x/pxPerSecond})
         }
-        
-
         const handleMouseUp = (e) => {
             //since storing the function in the event listener with playheadLocation stored will result in a stale value
             //we have to do this nonsense
             setPlayheadLocation(prev=>{
                 if(mouseDragEnd){
-                    if((snapToGrid&&(mouseDragEnd.x-prev)*pxPerSecond<rect.width/128/4)||
-                    (!snapToGrid&&(mouseDragEnd.xactual-prev)*pxPerSecond<rect.width/128/4)){
+                    if((snapToGrid&&(mouseDragEnd.x-prev)*pxPerSecond<rect.width/128/2)||
+                    (!snapToGrid&&(mouseDragEnd.xactual-prev)*pxPerSecond<rect.width/128/2)){
                         setMouseDragEnd(null)
                 }}
                 return prev
@@ -251,12 +259,12 @@ export default function RecorderInterface({
 
     }    
 
-    return <div className="grid overflow-x-auto relative h-48 border-black border-0 shadow-sm shadow-blak"
-                style={{width:1000}} ref={scrollWindowRef}>
-                <canvas className="h-10 row-start-1 col-start-2"
-                    style={{width:Math.floor(1000*zoomFactor)}}
+    return <div className="grid overflow-x-auto relative border-black border-0 shadow-sm shadow-blak"
+                style={{width:1000,height:150}} ref={scrollWindowRef}>
+                <canvas className="row-start-1 col-start-2"
+                    style={{width:Math.floor(1000*zoomFactor),height:35}}
                     width={Math.floor(1000*zoomFactor)}
-                    height={40}
+                    height={35}
                     ref={measureTickRef}
                     onMouseDown={handleCanvasMouseDown}
                     onMouseUp={handleCanvasMouseUp}
@@ -266,15 +274,17 @@ export default function RecorderInterface({
                 <canvas
                     ref={canvasContainerRef}
                     width={Math.floor(1000*zoomFactor)}
-                    style={{width:`${Math.floor(1000*zoomFactor)}px`,imageRendering:"pixelated"}}
-                    className="h-40 row-start-2 col-start-2"
+                    height={115}
+                    style={{width:`${Math.floor(1000*zoomFactor)}px`,height:"115px",imageRendering:"pixelated"}}
+                    className="row-start-2 col-start-2"
                     >
                 </canvas>
                 <canvas 
                 ref={waveformRef}
                 width={Math.floor(1000*zoomFactor)}
-                style={{width:Math.floor(1000*zoomFactor),imageRendering:"pixelated"}} 
-                className={`h-40 row-start-2 col-start-2`}
+                height={115}
+                style={{width:Math.floor(1000*zoomFactor),imageRendering:"pixelated",height:"115px"}} 
+                className={`row-start-2 col-start-2`}
                 onMouseDown={handleCanvasMouseDown}
                 onMouseUp={handleCanvasMouseUp}
                 onMouseMove={handleCanvasMouseMove}
@@ -295,20 +305,22 @@ export default function RecorderInterface({
                 {<div ref={playheadRef} style={{position:"absolute",top:0,bottom:0,left:-1,
                     width:"4px", transform:`translateX(${playheadPx}px)`}}
                     onMouseDown={handleMovePlayhead}
-                    className="flex flex-col items-center">
+                    className="flex flex-col items-center"
+                    onDragStart={(e) => e.preventDefault()}
+                    >
                     <div style={{
                             width: "8px",
                             height: "8px",
                             borderRadius: "50%",
                             background: "red",
-                            marginTop: "33px",
+                            marginTop: "26px",
                             }}
                             >
                     
                     </div>
                     <div
                     style={{
-                        position:"absolute",top:40,bottom:0,
+                        position:"absolute",top:25,bottom:0,
                         width:"2px",background:"red",
                     }}
                     ></div>
