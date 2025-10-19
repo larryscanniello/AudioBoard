@@ -66,11 +66,11 @@ export default function RecorderInterface({
             tickCtx.fillStyle = "rgb(175,175,175)"
             tickCtx.fillRect(0,0,WIDTH,HEIGHT);
             if(mouseDragEnd&&snapToGrid){
-                tickCtx.fillStyle = "rgb(225,225,0,.1)"
+                tickCtx.fillStyle = "rgb(225,125,0,.25)"
                 tickCtx.fillRect(mouseDragStart.x*pxPerSecond,0,(mouseDragEnd.x-mouseDragStart.x)*pxPerSecond,HEIGHT)
             }
             if(mouseDragEnd&&!snapToGrid){
-                tickCtx.fillStyle = "rgb(225,225,0,.1)"
+                tickCtx.fillStyle = "rgb(225,125,0,.25)"
                 tickCtx.fillRect(mouseDragStart.xactual*pxPerSecond,0,(mouseDragEnd.xactual-mouseDragStart.xactual)*pxPerSecond,HEIGHT)
             }
             tickCtx.lineWidth = 5;
@@ -215,16 +215,33 @@ export default function RecorderInterface({
     };
 
     const handleMovePlayhead = (e) => {
-
+        const rect = scrollWindowRef.current.getBoundingClientRect()
+        if(e.clientY-rect.y < 30) return;
         const handleMouseMove = (e) => {
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
+            if(mouseDragEnd){
+                if((!snapToGrid && e.clientX-rect.x>mouseDragEnd.xactual*pxPerSecond)||(snapToGrid&&e.clientX-rect.x>mouseDragEnd.x*pxPerSecond)){
+                    return             
+                }
+            }
             setPlayheadLocation(x/pxPerSecond);
             const xrounded = rect.width*Math.floor(x*128/rect.width)/128
             setMouseDragStart({x:xrounded/pxPerSecond,xactual:x/pxPerSecond})
         }
+        
 
         const handleMouseUp = (e) => {
+            //since storing the function in the event listener with playheadLocation stored will result in a stale value
+            //we have to do this nonsense
+            setPlayheadLocation(prev=>{
+                if(mouseDragEnd){
+                    if((snapToGrid&&(mouseDragEnd.x-prev)*pxPerSecond<rect.width/128/4)||
+                    (!snapToGrid&&(mouseDragEnd.xactual-prev)*pxPerSecond<rect.width/128/4)){
+                        setMouseDragEnd(null)
+                }}
+                return prev
+            })
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mouseup", handleMouseUp);
         };
@@ -275,7 +292,7 @@ export default function RecorderInterface({
                     }}
                         >
                 </div>*/}
-                {<div ref={playheadRef} style={{position:"absolute",top:0,bottom:0,
+                {<div ref={playheadRef} style={{position:"absolute",top:0,bottom:0,left:-1,
                     width:"4px", transform:`translateX(${playheadPx}px)`}}
                     onMouseDown={handleMovePlayhead}
                     className="flex flex-col items-center">
@@ -285,8 +302,9 @@ export default function RecorderInterface({
                             borderRadius: "50%",
                             background: "red",
                             marginTop: "33px",
-                            }}>
-
+                            }}
+                            >
+                    
                     </div>
                     <div
                     style={{

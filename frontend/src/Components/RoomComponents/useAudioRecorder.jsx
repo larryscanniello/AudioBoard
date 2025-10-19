@@ -168,14 +168,15 @@ export const useAudioRecorder = (
 
   const startDelayCompensationRecording = (metRef) => {
     if (delayCompensationRecorderRef.current && metRef.current) {
+      const prevtempo = metRef.current.tempo;
+      metRef.current.tempo = 120;
       metRef.current.start();
       delayCompensationRecorderRef.current.start();
       console.log("Delay compensation recording started");
-      
-      // Auto-stop after 2 seconds
       setTimeout(() => {
         metronomeRef.current.stop();
         delayCompensationRecorderRef.current.stop();
+        metRef.current.tempo = prevtempo
       }, 400);
     }
   }

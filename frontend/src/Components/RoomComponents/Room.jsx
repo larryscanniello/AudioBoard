@@ -322,17 +322,19 @@ export default function Room(){
     };
 
     const handleSkipBack = () => {
-        setMouseDragEnd(null);
-        setMouseDragStart({x:0,xactual:0});
-        scrollWindowRef.current.scrollLeft = 0;
-        setPlayheadLocation(0);
+        if(!currentlyPlayingAudio.current&&!currentlyRecording.current){
+            setMouseDragEnd(null);
+            setMouseDragStart({x:0,xactual:0});
+            scrollWindowRef.current.scrollLeft = 0;
+            setPlayheadLocation(0);
+        }
     }
 
 
 
     return <div className="">
         <div className="w-full grid place-items-center items-center">
-            <div className="grid h-70 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-gray-800 shadow-md"
+            <div className="grid h-70 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-gray shadow-md"
                 style={{width:1050}}>
                 <div className="grid place-items-center items-center">
                     <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
@@ -349,7 +351,12 @@ export default function Room(){
                 <div className="grid grid-rows-1 grid-cols-20 place-items-center items-center" style={{height:40,padding:30}}>
                     <ButtonGroup className="rounded border-1 border-gray-300 col-start-4">
                         <Button variant="default" size="lg" className="hover:bg-gray-800"
-                            onClick={()=>{handlePlayAudio();socket.current.emit("client_to_server_play_audio",{roomID})}}>
+                            onClick={()=>{
+                                if(!currentlyPlayingAudio.current&&!currentlyRecording.current){
+                                    handlePlayAudio();
+                                    socket.current.emit("client_to_server_play_audio",{roomID})
+                                }    
+                                }}>
                             <Play color={"lightgreen"} style={{width:20,height:20}}/> 
                         </Button>
                         <ButtonGroupSeparator/>
@@ -366,7 +373,11 @@ export default function Room(){
                         <ButtonGroupSeparator/>
                         <Button 
                             variant="default" size="lg" className="hover:bg-gray-800"
-                            onClick={()=>{startRecording(metronomeRef)}}
+                            onClick={()=>{
+                                if(!currentlyPlayingAudio.current&&!currentlyRecording.current){
+                                    startRecording(metronomeRef);
+                                }
+                            }}
                         >
                             <Circle color={"red"}className="" style={{width:20,height:20}}/>
                         </Button>
@@ -378,7 +389,11 @@ export default function Room(){
                         </Button>
                         <ButtonGroupSeparator/>
                         <Button variant="default" size="lg" className="hover:bg-gray-800"
-                                onClick={()=>setMetronomeOn(prev=>!prev)}>
+                                onClick={()=>{
+                                    if(!currentlyPlayingAudio.current&&!currentlyRecording.current){
+                                        setMetronomeOn(prev=>!prev)
+                                    }
+                                }}>
                             <PiMetronomeDuotone style={{width:20,height:20}} 
                                                 color={metronomeOn ? "pink" : ""}
                                                 />
