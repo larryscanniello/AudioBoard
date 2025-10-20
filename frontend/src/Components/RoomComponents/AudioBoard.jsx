@@ -425,15 +425,16 @@ export default function AudioBoard(){
                         </Button>
                     </ButtonGroup>
                     <div className="flex flex-row items-center col-start-3">
-                        <FaMagnifyingGlass style={{transform:"scale(1.1)",marginRight:3}} className=""/>
+                        <FaMagnifyingGlass style={{transform:"scale(1.1)",marginRight:3}} className="text-blue-200"/>
                         <Slider style={{width:100}}
-                        defaultValue={[20000/32]} max={5000} min={10000/32} step={1} 
-                            className="pl-2 group" value={[zoomFactor*(10000/32)]} onValueChange={(value)=>{
+                        defaultValue={[20000/32]} max={1000} min={0} step={1} 
+                            className="pl-2 group" value={[Math.log10(zoomFactor)/Math.log10(10**(Math.log10(16)/1000))]} onValueChange={(value)=>{
                                 setZoomFactor(prev => {
                                     /*if(currentlyPlayingAudio.current||currentlyRecording.current){
                                         return prev
                                     }*/
-                                    const newZoomFactor = value*(32/10000)
+                                    const b = 10**(Math.log10(16)/1000)
+                                    const newZoomFactor = b**value
                                     return newZoomFactor
                                 })
 
@@ -441,7 +442,7 @@ export default function AudioBoard(){
                         </Slider>
                     </div>
                     <Popover>
-                        <PopoverTrigger className="col-start-4 hover:underline">Latency</PopoverTrigger>
+                        <PopoverTrigger className="col-start-4 hover:underline text-blue-200">Latency</PopoverTrigger>
                         <PopoverContent onCloseAutoFocus={()=>setDisplayDelayCompensationMessage(false)} style={{transform:"translateY(-100%)"}}>
                             <div>Place your microphone near your speakers,
                                 turn your volume up,
