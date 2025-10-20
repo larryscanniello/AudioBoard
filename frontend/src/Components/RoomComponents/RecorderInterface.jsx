@@ -1,6 +1,4 @@
 import { useEffect,useRef,useState } from "react";
-import { Button } from "@/components/ui/button"
-import { Magnet,Columns4 } from "lucide-react";
 
 export default function RecorderInterface({
     audio,BPM,mouseDragEnd,zoomFactor,delayCompensation,
