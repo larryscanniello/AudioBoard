@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import io from "socket.io-client"
 import Metronome from "../../Classes/Metronome"
 import { useAudioRecorder } from "./useAudioRecorder";
-import RecorderInterface from "./recorderInterface";
+import RecorderInterface from "./RecorderInterface";
 import { Button } from "@/components/ui/button"
 import { Play, Square, Circle,SkipBack,Lock,LockOpen,
     Columns4,Magnet,ChevronsDownUp,ChevronsUpDown } from "lucide-react"
