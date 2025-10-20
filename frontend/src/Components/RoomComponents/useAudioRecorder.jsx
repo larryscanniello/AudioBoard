@@ -12,7 +12,6 @@ export const useAudioRecorder = (
   const mediaRecorderRef = useRef(null);
   const delayCompensationRecorderRef = useRef(null);
   const streamRef = useRef(null);
-  const ffmpeg = new FFmpeg();
   
 
   // Initialize media stream and recorders
