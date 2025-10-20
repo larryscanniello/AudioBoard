@@ -8,6 +8,7 @@ import { useState } from "react";
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [showUnderConstruction,setShowUnderConstruction] = useState(false);
 
   return <div>
         <div className="flex items-center justify-center">
@@ -32,10 +33,11 @@ export default function Landing() {
         <div className="w-full flex flex-col items-center mt-10 text-xl">
           <div className="text-3xl mb-2">Join a room:</div>
             <a className="pt-2 pb-2 pl-8 pr-8 rounded-3xl bg-blue-200 hover:bg-blue-300 flex flex-row"
-              href="http://localhost:3000/auth/google">
+              onClick={()=>setShowUnderConstruction(true)}>
                 <div>Login with</div> 
                 <FcGoogle style={{transform:"scale(1.2)",marginTop:"2.5px",marginLeft:"8px"}}/>
             </a>
+            {showUnderConstruction && <div className="mt-2 text-amber-800">The rooms are currently under construction. Check back shortly.</div>}
         </div>
         
   </div>
