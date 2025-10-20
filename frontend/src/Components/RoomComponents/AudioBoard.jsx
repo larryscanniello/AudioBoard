@@ -4,21 +4,21 @@ import io from "socket.io-client"
 import Metronome from "../../Classes/Metronome"
 import { useAudioRecorder } from "./useAudioRecorder";
 import RecorderInterface from "./RecorderInterface";
-import { Button } from "@/components/ui/button"
+import { Button } from "@/Components/ui/button"
 import { Play, Square, Circle,SkipBack,Lock,LockOpen,
     Columns4,Magnet,ChevronsDownUp,ChevronsUpDown } from "lucide-react"
 import {
   ButtonGroup,
   ButtonGroupSeparator,
   ButtonGroupText,
-} from "@/components/ui/button-group"
+} from "@/Components/ui/button-group"
 import { PiMetronomeDuotone } from "react-icons/pi";
-import { Slider } from "@/components/ui/slider"
+import { Slider } from "@/Components/ui/slider"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/Components/ui/popover"
 import { FaMagnifyingGlass } from "react-icons/fa6";
 import blackbirdDemo from "/audio/BlackbirdAudioBoarddemo.wav"
 
