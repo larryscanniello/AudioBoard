@@ -1,5 +1,6 @@
 // useAudioRecorder.js
 import { useRef, useEffect, useState } from 'react';
+import { FFmpeg } from "@ffmpeg/ffmpeg";
 
 export const useAudioRecorder = (
   {AudioCtxRef, metronomeRef,socket, roomID, setAudio,
@@ -12,6 +13,7 @@ export const useAudioRecorder = (
   const mediaRecorderRef = useRef(null);
   const delayCompensationRecorderRef = useRef(null);
   const streamRef = useRef(null);
+  const ffmpeg = new FFmpeg();
   
 
   // Initialize media stream and recorders
@@ -56,18 +58,19 @@ export const useAudioRecorder = (
             });
           }
 
-          const blob = new Blob(chunks, { type: "audio/ogg; codecs=opus" });
-          const audioURLtemp = window.URL.createObjectURL(blob);
-          const arrayBuffer = await blob.arrayBuffer();
-          const decoded = await AudioCtxRef.current.decodeAudioData(arrayBuffer);
+          const blob = new Blob(chunks, { type: "audio/webm; codecs=opus" });
+          const webmArrayBuffer = await blob.arrayBuffer();
           
+          const decoded = await AudioCtxRef.current.decodeAudioData(webmArrayBuffer);
           setAudioChunks([...chunks]);
-          setAudioURL(audioURLtemp);
           setAudio(decoded);
           setMouseDragStart({x:0,xactual:0});
           setMouseDragEnd(null);
-          playheadRef.current.style.transform = "translateX(0)";
+          setPlayheadLocation(0);
           chunks = [];
+
+          //setAudioURL(audioURLtemp);
+          
         };
 
         // Setup delay compensation recorder

@@ -20,6 +20,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { FaMagnifyingGlass } from "react-icons/fa6";
+import blackbirdDemo from "/audio/BlackbirdAudioBoarddemo.wav"
 
 export default function AudioBoard(){
 
@@ -28,8 +29,8 @@ export default function AudioBoard(){
     const [audio,setAudio] = useState(null);
     const waveformRef = useRef(null);
     const [BPM,setBPM] = useState(120);
-    const [mouseDragStart,setMouseDragStart] = useState(null);
-    const [mouseDragEnd,setMouseDragEnd] = useState(null);
+    const [mouseDragStart,setMouseDragStart] = useState({x:2.25,xactual:2.25});
+    const [mouseDragEnd,setMouseDragEnd] = useState({x:13.5,xactual:13.5});
     const [isDragging,setIsDragging] = useState(null);
     const audioObjectRef = useRef(null);
     const { roomID } = useParams();
@@ -54,7 +55,7 @@ export default function AudioBoard(){
     const [metronomeOn,setMetronomeOn] = useState(true);
     const scrollWindowRef = useRef(null);
     const currentlyRecording = useRef(false);
-    const [playheadLocation,setPlayheadLocation] = useState(0);
+    const [playheadLocation,setPlayheadLocation] = useState(2.25);
     const [snapToGrid,setSnapToGrid] = useState(true);
     const [compactMode,setCompactMode] = useState(false);
     const {startRecording,
@@ -78,6 +79,15 @@ export default function AudioBoard(){
         const analyser = AudioCtxRef.current.createAnalyser();
         analyser.minDecibels = -90;
         analyser.maxDecibels = -10;
+        const getDemo = async ()=>{
+            const response = await fetch(blackbirdDemo)
+            const arrayBuffer = await response.arrayBuffer();
+            const decoded = await AudioCtxRef.current.decodeAudioData(arrayBuffer)
+            setAudio(decoded);
+            setBPM(80);
+        }
+        getDemo()
+        
 
         const processAudio = async (newchunks) => {
             console.log('check04')
@@ -196,7 +206,10 @@ export default function AudioBoard(){
     const handlePlayAudio = () => {
         if(!audio) return;
         const source = AudioCtxRef.current.createBufferSource();
-        source.buffer = audio;
+        const stereoBuffer = AudioCtxRef.current.createBuffer(2, audio.length, AudioCtxRef.current.sampleRate);
+        stereoBuffer.getChannelData(0).set(audio.getChannelData(0));
+        stereoBuffer.getChannelData(1).set(audio.getChannelData(0));
+        source.buffer = stereoBuffer;
         source.connect(AudioCtxRef.current.destination);
         source.onended = () => {
             currentlyPlayingAudio.current=false;
@@ -259,10 +272,9 @@ export default function AudioBoard(){
         if(metronomeOn){
             metronomeRef.current.start(now+timeToNextMeasure);
         }
-        source.start(0,startTime+secondsToDelay,endTime-startTime)
+        source.start(AudioCtxRef.current.currentTime+.05,startTime+secondsToDelay,endTime-startTime)
         playingAudioRef.current = source;
         currentlyPlayingAudio.current = true;
-        console.log(startTime)
         updatePlayhead(startTime)
     }
 
@@ -275,7 +287,7 @@ export default function AudioBoard(){
         setCurrentlyAdjustingLatency(prev=>!prev)
     }
 
-    if(currentlyAdjustingLatency){
+    /*if(currentlyAdjustingLatency){
         if(delayCompensationSourceRef.current){
             delayCompensationSourceRef.current.stop();
         }
@@ -289,7 +301,8 @@ export default function AudioBoard(){
         source.start(0,delayCompensation/AudioCtxRef.current.sampleRate);
         metronomeRef.current.start();
         delayCompensationSourceRef.current = source;
-    }
+    }*/
+        
 
     const handleTempoMouseDown = (e) => {
         if(currentlyPlayingAudio.current||currentlyRecording.current){
@@ -335,7 +348,8 @@ export default function AudioBoard(){
         <div className="w-full grid place-items-center items-center">
             <div className="grid grid-rows-[1px_172px] h-58 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-gray shadow-md"
                 style={{width:1050}}>
-                <div className="row-start-2 grid place-items-center items-center h-43">
+                
+                <div className="relative row-start-2 grid place-items-center items-center h-43">
                     <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
                                 delayCompensation={delayCompensation} measureTickRef={measureTickRef}
                                 setIsDragging={setIsDragging} mouseDragStart={mouseDragStart}
@@ -347,7 +361,12 @@ export default function AudioBoard(){
                                 snapToGrid={snapToGrid} currentlyPlayingAudio={currentlyPlayingAudio}
                                 setSnapToGrid={setSnapToGrid}
                     />
-                    
+                    <Button variant="default" size="lg" onClick={()=>setSnapToGrid(prev=>!prev)} 
+                        className="border-1 border-gray-300 hover:bg-gray-800"
+                        style={{position:"absolute",right:15,top:120,transform:"scale(.7)"}}>
+                        <Magnet color={snapToGrid ? "lightblue" : "white"} style={{transform:"rotate(315deg) scale(1.5)"}}></Magnet>
+                        <Columns4 color={snapToGrid ? "lightblue" : "white"} style={{transform:"scale(1.5)"}}></Columns4>
+                    </Button>
                 </div>
                 
                 <div className="row-start-3 h-8 grid grid-cols-[20px_375px_125px_125px_125px_125px]" >
@@ -450,9 +469,9 @@ export default function AudioBoard(){
 
                         </PopoverContent>
                     </Popover>
-                    <a download href={audioURL} className={"flex items-center col-start-5 " + (audio ? "hover:underline" : "opacity-25")}>
+                    {/*<a download href={audioURL} className={"flex items-center col-start-5 " + (audio ? "hover:underline" : "opacity-25")}>
                     Download
-                    </a>
+                    </a>*/}
                     
                 </div>
             </div>

@@ -265,12 +265,7 @@ export default function RecorderInterface({
 
     return <div className="grid overflow-x-auto relative border-black border-0 shadow-sm shadow-blak"
                 style={{width:1000,height:150}} ref={scrollWindowRef}>
-                <Button variant="default" size="lg" onClick={()=>setSnapToGrid(prev=>!prev)} 
-                    className="absolute border-1 row-start-2 border-gray-300 hover:bg-gray-800"
-                    style={{right:-6,top:76,transform:"scale(.7)"}}>
-                    <Magnet color={snapToGrid ? "lightblue" : "white"} style={{transform:"rotate(315deg) scale(1.5)"}}></Magnet>
-                    <Columns4 color={snapToGrid ? "lightblue" : "white"} style={{transform:"scale(1.5)"}}></Columns4>
-                </Button>
+                
                 <canvas className="row-start-1 col-start-2"
                     style={{width:Math.floor(1000*zoomFactor),height:35}}
                     width={Math.floor(1000*zoomFactor)}
@@ -280,6 +275,7 @@ export default function RecorderInterface({
                     onMouseUp={handleCanvasMouseUp}
                     onMouseMove={handleCanvasMouseMove}
                 >
+                    
                 </canvas>
                 <canvas
                     ref={canvasContainerRef}
@@ -288,6 +284,7 @@ export default function RecorderInterface({
                     style={{width:`${Math.floor(1000*zoomFactor)}px`,height:"115px",imageRendering:"pixelated"}}
                     className="row-start-2 col-start-2"
                     >
+                    
                 </canvas>
                 <canvas 
                 ref={waveformRef}

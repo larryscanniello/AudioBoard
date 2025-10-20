@@ -70,10 +70,10 @@ export default class Metronome
 
         this.isRunning = true;
 
-        if(!startTime){
-            this.nextNoteTime = this.audioContext.currentTime+ 0.05;
+        if(!startTime===null){
+            this.nextNoteTime = this.audioContext.currentTime+.05; //+.05
         }else{
-            this.nextNoteTime = startTime;
+            this.nextNoteTime = startTime+.05;
         }
         
 
