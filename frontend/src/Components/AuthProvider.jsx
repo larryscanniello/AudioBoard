@@ -1,16 +1,10 @@
-import { createContext, useState, useEffect, type SetStateAction, type Dispatch} from 'react';
+import { createContext, useState, useEffect} from 'react';
 
-interface User{
-    id: number,
-    username: string,
-  }
-
-type AuthState = {user:User} | null;
 
 export const AuthContext = createContext(null);
 
 export default function AuthProvider({ children }) {
-  const [isAuthorized, setIsAuthorized] = useState<AuthState>(null);
+  const [isAuthorized, setIsAuthorized] = useState(null);
 
   useEffect(() => {
     fetch("http://localhost:3000/me", { credentials: "include" })

@@ -20,7 +20,7 @@ const router = createBrowserRouter([
         }
 ])
 
-const root = ReactDOM.createRoot(document.getElementById('root')!);
+const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
       <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <RouterProvider router = {router} />
