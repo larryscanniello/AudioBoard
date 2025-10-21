@@ -68,11 +68,11 @@ export default function RecorderInterface({
             tickCtx.fillRect(0,0,WIDTH,HEIGHT);
             if(mouseDragEnd&&snapToGrid){
                 tickCtx.fillStyle = "rgb(225,125,0,.25)"
-                tickCtx.fillRect(mouseDragStart.x*pxPerSecond,0,(mouseDragEnd.x-mouseDragStart.x)*pxPerSecond,HEIGHT)
+                tickCtx.fillRect(mouseDragStart.trounded*pxPerSecond,0,(mouseDragEnd.trounded-mouseDragStart.trounded)*pxPerSecond,HEIGHT)
             }
             if(mouseDragEnd&&!snapToGrid){
                 tickCtx.fillStyle = "rgb(225,125,0,.25)"
-                tickCtx.fillRect(mouseDragStart.xactual*pxPerSecond,0,(mouseDragEnd.xactual-mouseDragStart.xactual)*pxPerSecond,HEIGHT)
+                tickCtx.fillRect(mouseDragStart.t*pxPerSecond,0,(mouseDragEnd.t-mouseDragStart.t)*pxPerSecond,HEIGHT)
             }
             tickCtx.lineWidth = 5;
             const sliceWidth = WIDTH/128;
@@ -100,19 +100,15 @@ export default function RecorderInterface({
             canvasCtx.globalAlpha = .2
             if(mouseDragEnd&&snapToGrid){
                 canvasCtx.fillStyle = "rgb(75,75,75,.5)"
-                canvasCtx.fillRect(mouseDragStart.x*pxPerSecond,0,(mouseDragEnd.x-mouseDragStart.x)*pxPerSecond,HEIGHT)
+                canvasCtx.fillRect(mouseDragStart.trounded*pxPerSecond,0,(mouseDragEnd.trounded-mouseDragStart.trounded)*pxPerSecond,HEIGHT)
             }
             if(mouseDragEnd&&!snapToGrid){
                 canvasCtx.fillStyle = "rgb(75,75,75,.5)"
-                canvasCtx.fillRect(mouseDragStart.xactual*pxPerSecond,0,(mouseDragEnd.xactual-mouseDragStart.xactual)*pxPerSecond,HEIGHT)
+                canvasCtx.fillRect(mouseDragStart.t*pxPerSecond,0,(mouseDragEnd.t-mouseDragStart.t)*pxPerSecond,HEIGHT)
             }
             if(audio){
                 const dataArray = audio.getChannelData(0);
                 const bufferLength = dataArray.length;
-                /*if(isDragging){
-                    canvasCtx.fillStyle = "rgb(75,75,75)"
-                    canvasCtx.fillRect(mouseDragStart.xactual,0,mouseDragEnd.xactual-mouseDragStart.xactual,HEIGHT)
-                }*/
                 const drawWaveform = () => {
                     canvasCtx.lineWidth =  1;
                     canvasCtx.strokeStyle = "rgb(0,0,0)";
@@ -167,7 +163,7 @@ export default function RecorderInterface({
         const rect = waveformRef.current.getBoundingClientRect();
         const x = (e.clientX-rect.left)
         const start = rect.width*Math.floor(x*128/rect.width)/128;
-        const coords = {x:start/pxPerSecond, xactual:x/pxPerSecond}
+        const coords = {trounded:start/pxPerSecond, t:x/pxPerSecond}
         setIsDragging(true);
         setMouseDragStart(coords);
         setMouseDragEnd(null);
@@ -177,8 +173,8 @@ export default function RecorderInterface({
         if(isDragging){
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
-            if(Math.abs(mouseDragStart.xactual*pxPerSecond-x)>5){
-                setMouseDragEnd({xactual:x/pxPerSecond,x:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond});
+            if(Math.abs(mouseDragStart.t*pxPerSecond-x)>5){
+                setMouseDragEnd({t:x/pxPerSecond,trounded:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond});
             }
         }
     }
@@ -187,30 +183,29 @@ export default function RecorderInterface({
         if (!isDragging) return;
         const rect = waveformRef.current.getBoundingClientRect();
         const x = e.clientX-rect.left
-        if(Math.abs(mouseDragStart.xactual*pxPerSecond-x)<=5){
-            setPlayheadLocation(mouseDragStart.xactual)
+        if(Math.abs(mouseDragStart.t*pxPerSecond-x)<=5){
+            setPlayheadLocation(mouseDragStart.t)
             setMouseDragEnd(null);
             socket.current.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd:null,roomID})
         }else{
             const start = rect.width*Math.ceil(x*128/rect.width)/128
-            const pos = {x:start/pxPerSecond, xactual:x/pxPerSecond}
-            if(x/pxPerSecond>=mouseDragStart.xactual){
+            const pos = {trounded:start/pxPerSecond, t:x/pxPerSecond}
+            if(x/pxPerSecond>=mouseDragStart.t){
                 if(snapToGrid){
-                    setPlayheadLocation(mouseDragStart.x)
+                    setPlayheadLocation(mouseDragStart.trounded)
                 }else{
-                    setPlayheadLocation(mouseDragStart.xactual)
+                    setPlayheadLocation(mouseDragStart.t)
                 }
                 setMouseDragEnd(pos);
                 socket.current.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd:pos,roomID})
             }else{
-                console.log('chek0')
                 const xrounded = rect.width*Math.floor(x*128/rect.width)/128
                 if(snapToGrid){
                     setPlayheadLocation(xrounded/pxPerSecond)
                 }else{
                     setPlayheadLocation(x/pxPerSecond)
                 }
-                setMouseDragStart({x:xrounded/pxPerSecond,xactual:x/pxPerSecond})
+                setMouseDragStart({trounded:xrounded/pxPerSecond,t:x/pxPerSecond})
                 setMouseDragEnd(mouseDragStart)
             }
         }    
@@ -225,7 +220,7 @@ export default function RecorderInterface({
             const x = e.clientX-rect.left
             
             if(mouseDragEnd){
-                if((!snapToGrid && e.clientX-rect.x>mouseDragEnd.xactual*pxPerSecond)||(snapToGrid&&e.clientX-rect.x>mouseDragEnd.x*pxPerSecond)){
+                if((!snapToGrid && e.clientX-rect.x>mouseDragEnd.t*pxPerSecond)||(snapToGrid&&e.clientX-rect.x>mouseDragEnd.trounded*pxPerSecond)){
                     return             
                 }
                 
@@ -239,15 +234,15 @@ export default function RecorderInterface({
                 setPlayheadLocation(x/pxPerSecond);
             }
             const xrounded = rect.width*Math.floor(x*128/rect.width)/128
-            setMouseDragStart({x:xrounded/pxPerSecond,xactual:x/pxPerSecond})
+            setMouseDragStart({trounded:xrounded/pxPerSecond,t:x/pxPerSecond})
         }
         const handleMouseUp = (e) => {
             //since storing the function in the event listener with playheadLocation stored will result in a stale value
             //we have to do this nonsense
             setPlayheadLocation(prev=>{
                 if(mouseDragEnd){
-                    if((snapToGrid&&(mouseDragEnd.x-prev)*pxPerSecond<rect.width/128/2)||
-                    (!snapToGrid&&(mouseDragEnd.xactual-prev)*pxPerSecond<rect.width/128/2)){
+                    if((snapToGrid&&(mouseDragEnd.trounded-prev)*pxPerSecond<rect.width/128/2)||
+                    (!snapToGrid&&(mouseDragEnd.t-prev)*pxPerSecond<rect.width/128/2)){
                         setMouseDragEnd(null)
                 }}
                 return prev

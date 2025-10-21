@@ -29,8 +29,8 @@ export default function AudioBoard(){
     const [audio,setAudio] = useState(null);
     const waveformRef = useRef(null);
     const [BPM,setBPM] = useState(120);
-    const [mouseDragStart,setMouseDragStart] = useState({x:2.25,xactual:2.25});
-    const [mouseDragEnd,setMouseDragEnd] = useState({x:13.5,xactual:13.5});
+    const [mouseDragStart,setMouseDragStart] = useState({trounded:2.25,t:2.25});
+    const [mouseDragEnd,setMouseDragEnd] = useState({trounded:13.5,t:13.5});
     const [isDragging,setIsDragging] = useState(null);
     const audioObjectRef = useRef(null);
     const { roomID } = useParams();
@@ -58,10 +58,11 @@ export default function AudioBoard(){
     const [playheadLocation,setPlayheadLocation] = useState(2.25);
     const [snapToGrid,setSnapToGrid] = useState(true);
     const [compactMode,setCompactMode] = useState(false);
+    
     const {startRecording,
-        stopRecording,
-        startDelayCompensationRecording,
-        isRecorderReady} = useAudioRecorder({AudioCtxRef,metronomeRef,socket,roomID,
+            stopRecording,
+            startDelayCompensationRecording,
+            isRecorderReady} = useAudioRecorder({AudioCtxRef,metronomeRef,socket,roomID,
                                             setAudio,setAudioURL,setAudioChunks,
                                             setDelayCompensationAudio,setMouseDragStart,
                                             setMouseDragEnd,playheadRef,setDelayCompensation,
@@ -101,7 +102,7 @@ export default function AudioBoard(){
 
         const handleEnterKey = (e) => {
             if(e.key==="Enter"){
-                setMouseDragStart({x:0,xactual:0});
+                setMouseDragStart({trounded:0,t:0});
                 setMouseDragEnd(null);
                 setPlayheadLocation(0);
                 scrollWindowRef.current.scrollLeft = 0;
@@ -112,13 +113,12 @@ export default function AudioBoard(){
         
 
         socket.current.on("receive_audio_server_to_client", async (data) => {
-            console.log('loam',data)
             if(data.i==0){
                 setAudioChunks(()=>{
                     if(data.length===1){
                         processAudio([data.audio])
-                        setMouseDragStart({x:0,xactual:0});
-                        setMouseDragEnd({x:0});
+                        setMouseDragStart({trounded:0,t:0});
+                        setMouseDragEnd(null);
                         setPlayheadLocation(0);
                     }
                     return [data.audio]
@@ -133,8 +133,8 @@ export default function AudioBoard(){
                     
                     if(data.length==newchunks.length){
                         processAudio(newchunks);
-                        setMouseDragStart({x:0,xactual:0});
-                        setMouseDragEnd({x:0});
+                        setMouseDragStart({trounded:0,t:0});
+                        setMouseDragEnd({trounded:0,t:0});
                         setPlayheadLocation(0);
                     }
                     return newchunks
@@ -145,7 +145,7 @@ export default function AudioBoard(){
         socket.current.on("send_play_window_to_clients", (data)=>{
             setMouseDragStart(data.mouseDragStart);
             setMouseDragEnd(data.mouseDragEnd);
-            const start = data.mouseDragEnd ? data.mouseDragStart.x : data.mouseDragStart ? data.mouseDragStart.xactual : 0;
+            const start = data.mouseDragEnd ? data.mouseDragStart.trounded : data.mouseDragStart ? data.mouseDragStart.t : 0;
             const pxPerSecond = Math.floor(1000*zoomFactor)/(128*60/BPM)
             setPlayheadLocation(start/pxPerSecond)
         })
@@ -222,20 +222,20 @@ export default function AudioBoard(){
         let endTime = Math.min(duration,totalTime);
         let timeToNextMeasure = 0;
         if(mouseDragStart&&(!mouseDragEnd||!snapToGrid)){
-            startTime = totalTime * mouseDragStart.xactual*pixelsPerSecond/waveformRef.current.width;
-            const nextBeat = 128*mouseDragStart.xactual*pixelsPerSecond/waveformRef.current.width
+            startTime = totalTime * mouseDragStart.t*pixelsPerSecond/waveformRef.current.width;
+            const nextBeat = 128*mouseDragStart.t*pixelsPerSecond/waveformRef.current.width
             metronomeRef.current.currentBeatInBar = Math.ceil(nextBeat)%4
             const beatFractionToNextMeasure = Math.ceil(nextBeat)-nextBeat
             const secondsPerBeat = (60/BPM)
             timeToNextMeasure = beatFractionToNextMeasure * secondsPerBeat
         }else if(mouseDragStart&&mouseDragEnd&&snapToGrid){
-            startTime = totalTime * mouseDragStart.x*pixelsPerSecond/ waveformRef.current.width;
-            metronomeRef.current.currentBeatInBar = Math.floor(128*mouseDragStart.x*pixelsPerSecond/waveformRef.current.width)%4
+            startTime = totalTime * mouseDragStart.trounded*pixelsPerSecond/ waveformRef.current.width;
+            metronomeRef.current.currentBeatInBar = Math.floor(128*mouseDragStart.trounded*pixelsPerSecond/waveformRef.current.width)%4
         }
         if(mouseDragEnd&&!snapToGrid){
-            endTime = totalTime * Math.min(1,mouseDragEnd.xactual*pixelsPerSecond/ waveformRef.current.width);
+            endTime = totalTime * Math.min(1,mouseDragEnd.t*pixelsPerSecond/ waveformRef.current.width);
         }else if(mouseDragEnd&&snapToGrid){
-            endTime = totalTime * Math.min(1,mouseDragEnd.x*pixelsPerSecond/ waveformRef.current.width);
+            endTime = totalTime * Math.min(1,mouseDragEnd.trounded*pixelsPerSecond/ waveformRef.current.width);
         }
         let now = AudioCtxRef.current.currentTime;
         const updatePlayhead = (start) => {
@@ -251,7 +251,7 @@ export default function AudioBoard(){
                 requestAnimationFrame(()=>{updatePlayhead(start)});
             }else if(!mouseDragEnd){
                 metronomeRef.current.stop();
-                setMouseDragStart({x:0,xactual:0})
+                setMouseDragStart({trounded:0,t:0})
                 setMouseDragEnd(null)
                 setPlayheadLocation(0)
             }else{
@@ -265,7 +265,7 @@ export default function AudioBoard(){
             startTime = 0;
             endTime = duration;
             timeToNextMeasure = 0;
-            setMouseDragStart({x:0,xactual:0})
+            setMouseDragStart({trounded:0,t:0})
             setMouseDragEnd(null)
             start = 0;
         }
@@ -336,7 +336,7 @@ export default function AudioBoard(){
     const handleSkipBack = () => {
         if(!currentlyPlayingAudio.current&&!currentlyRecording.current){
             setMouseDragEnd(null);
-            setMouseDragStart({x:0,xactual:0});
+            setMouseDragStart({trounded:0,t:0});
             scrollWindowRef.current.scrollLeft = 0;
             setPlayheadLocation(0);
         }

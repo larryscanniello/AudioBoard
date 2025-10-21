@@ -62,7 +62,7 @@ export const useAudioRecorder = (
           const decoded = await AudioCtxRef.current.decodeAudioData(webmArrayBuffer);
           setAudioChunks([...chunks]);
           setAudio(decoded);
-          setMouseDragStart({x:0,xactual:0});
+          setMouseDragStart({trounded:0,t:0});
           setMouseDragEnd(null);
           setPlayheadLocation(0);
           chunks = [];
