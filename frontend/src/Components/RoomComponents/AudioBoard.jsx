@@ -303,8 +303,8 @@ export default function AudioBoard({isDemo}){
             start = 0;
         }
         if(metronomeOn){
-            //metronome has .05 second delay built into it
-            metronomeRef.current.start(now+timeToNextMeasure);
+            //the .05 added to now previously was for playhead rendering purposes, we need to subtract it here
+            metronomeRef.current.start(now-.05+timeToNextMeasure);
         }
         //source.start arguments are (time to wait to play audio,location in audio to start,duration to play)
         source.start(AudioCtxRef.current.currentTime+.05,startTime+secondsToDelay,endTime-startTime)
