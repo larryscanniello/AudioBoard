@@ -29,7 +29,6 @@ export default function AudioBoard({isDemo}){
     const [BPM,setBPM] = useState(120);
     const [mouseDragStart,setMouseDragStart] = useState({trounded:2.25,t:2.25}); //time in seconds
     const [mouseDragEnd,setMouseDragEnd] = useState({trounded:13.5,t:13.5}); //time in seconds
-    const [isDragging,setIsDragging] = useState(null);
     const [roomResponse,setRoomResponse] = useState(null);
     const [audioChunks,setAudioChunks] = useState([]);
     const [zoomFactor,setZoomFactor] = useState(2);
@@ -356,13 +355,12 @@ export default function AudioBoard({isDemo}){
         <div className="w-full grid place-items-center items-center">
             <div className="grid grid-rows-[1px_172px] h-58 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-gray shadow-md"
                 style={{width:1050}}>
-                
                 <div className="relative row-start-2 grid place-items-center items-center h-43">
                     <RecorderInterface audio={audio} BPM={BPM} mouseDragEnd={mouseDragEnd} zoomFactor={zoomFactor}
                                 delayCompensation={delayCompensation} measureTickRef={measureTickRef}
-                                setIsDragging={setIsDragging} mouseDragStart={mouseDragStart}
+                                mouseDragStart={mouseDragStart}
                                 audioCtxRef={AudioCtxRef} waveformRef={waveformRef}
-                                playheadRef={playheadRef} isDragging={isDragging} setMouseDragStart={setMouseDragStart}
+                                playheadRef={playheadRef} setMouseDragStart={setMouseDragStart}
                                 setMouseDragEnd={setMouseDragEnd} socket={socket} roomID={roomID}
                                 scrollWindowRef={scrollWindowRef} playheadLocation={playheadLocation}
                                 setPlayheadLocation={setPlayheadLocation} audioURL={audioURL}

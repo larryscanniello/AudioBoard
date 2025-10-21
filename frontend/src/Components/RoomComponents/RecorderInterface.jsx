@@ -2,14 +2,15 @@ import { useEffect,useRef,useState } from "react";
 
 export default function RecorderInterface({
     audio,BPM,mouseDragEnd,zoomFactor,delayCompensation,
-    measureTickRef,setIsDragging,mouseDragStart,audioCtxRef,
-    waveformRef,playheadRef,isDragging,setMouseDragStart,
+    measureTickRef,mouseDragStart,audioCtxRef,
+    waveformRef,playheadRef,setMouseDragStart,
     setMouseDragEnd,socket,roomID,scrollWindowRef,
     playheadLocation,setPlayheadLocation,snapToGrid,
     currentlyPlayingAudio,isDemo
 }){
 
     const canvasContainerRef = useRef(null);
+    const isDraggingPlaybackRegion = useRef(false);
 
     //Used to set playhead location in the DOM, and also for calculations on the canvas
     const pxPerSecond = Math.floor(1000*zoomFactor)/(128*60/BPM)
@@ -171,8 +172,10 @@ export default function RecorderInterface({
         const coords = {trounded:rounded/pxPerSecond, t:x/pxPerSecond}
         setMouseDragStart(coords);
         setMouseDragEnd(null);
+        isDraggingPlaybackRegion.current = true;
 
         const handleCanvasMouseMove = (e) => {
+            if(!isDraggingPlaybackRegion.current) return;
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
             let mousedragstart;
@@ -187,6 +190,7 @@ export default function RecorderInterface({
             
         }
         const handleCanvasMouseUp = (e) => {
+            isDraggingPlaybackRegion.current = false;
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
             let mousedragstart,mousedragend;
