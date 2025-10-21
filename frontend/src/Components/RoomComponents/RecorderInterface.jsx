@@ -11,6 +11,8 @@ export default function RecorderInterface({
 
     const canvasContainerRef = useRef(null);
     const isDraggingPlaybackRegion = useRef(false);
+    const mouseDragStartRef = useRef(mouseDragStart);
+    const mouseDragEndRef = useRef(mouseDragEnd);
 
     //Used to set playhead location in the DOM, and also for calculations on the canvas
     const pxPerSecond = Math.floor(1000*zoomFactor)/(128*60/BPM)
@@ -172,36 +174,28 @@ export default function RecorderInterface({
         const coords = {trounded:rounded/pxPerSecond, t:x/pxPerSecond}
         setMouseDragStart(coords);
         setMouseDragEnd(null);
+        mouseDragStartRef.current = coords;
+        mouseDragEndRef.current = null;
         isDraggingPlaybackRegion.current = true;
 
         const handleCanvasMouseMove = (e) => {
             if(!isDraggingPlaybackRegion.current) return;
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
-            let mousedragstart;
-            setMouseDragStart(prev=>{
-                mousedragstart = prev;
-                return prev
-            })
+            const mousedragstart = mouseDragStartRef.current;
             //if mouse has been dragged 5 pixels or less, doesn't count as a playback region
             if(Math.abs(mousedragstart.t*pxPerSecond-x)>5){
-                setMouseDragEnd({t:x/pxPerSecond,trounded:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond});
+                const mousedragend = {t:x/pxPerSecond,trounded:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond}
+                setMouseDragEnd(mousedragend);
+                mouseDragEndRef.current = mousedragend;
             }
-            
         }
         const handleCanvasMouseUp = (e) => {
             isDraggingPlaybackRegion.current = false;
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
-            let mousedragstart,mousedragend;
-            setMouseDragStart(prev=>{
-                mousedragstart = prev;
-                return prev
-            })
-            setMouseDragEnd(prev=>{
-                mousedragend = prev;
-                return prev
-            })
+            const mousedragstart = mouseDragStartRef.current;
+            const mousedragend = mouseDragEndRef.current;
             if(Math.abs(mousedragstart.t*pxPerSecond-x)<=5){
                 setPlayheadLocation(mousedragstart.t)
                 setMouseDragEnd(null);
