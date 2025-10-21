@@ -6,7 +6,7 @@ export default function RecorderInterface({
     waveformRef,playheadRef,isDragging,setMouseDragStart,
     setMouseDragEnd,socket,roomID,scrollWindowRef,
     playheadLocation,setPlayheadLocation,snapToGrid,
-    currentlyPlayingAudio
+    currentlyPlayingAudio,isDemo
 }){
 
     const canvasContainerRef = useRef(null);
@@ -191,7 +191,9 @@ export default function RecorderInterface({
         if(Math.abs(mouseDragStart.t*pxPerSecond-x)<=5){
             setPlayheadLocation(mouseDragStart.t)
             setMouseDragEnd(null);
-            socket.current.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd:null,roomID})
+            if(!isDemo){
+                socket.current.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd:null,roomID})
+            }
         }else{
             const start = rect.width*Math.ceil(x*128/rect.width)/128
             const pos = {trounded:start/pxPerSecond, t:x/pxPerSecond}

@@ -367,7 +367,7 @@ export default function AudioBoard({isDemo}){
                                 scrollWindowRef={scrollWindowRef} playheadLocation={playheadLocation}
                                 setPlayheadLocation={setPlayheadLocation} audioURL={audioURL}
                                 snapToGrid={snapToGrid} currentlyPlayingAudio={currentlyPlayingAudio}
-                                setSnapToGrid={setSnapToGrid}
+                                setSnapToGrid={setSnapToGrid} isDemo={isDemo}
                     />
                     <Button variant="default" size="lg" onClick={()=>setSnapToGrid(prev=>!prev)} 
                         className="border-1 border-gray-300 hover:bg-gray-800"
