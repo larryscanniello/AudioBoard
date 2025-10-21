@@ -11,6 +11,7 @@ export default function RecorderInterface({
 
     const canvasContainerRef = useRef(null);
 
+    //Used to set playhead location in the DOM, and also for calculations on the canvas
     const pxPerSecond = Math.floor(1000*zoomFactor)/(128*60/BPM)
     const playheadPx = playheadLocation*pxPerSecond
 
@@ -168,56 +169,77 @@ export default function RecorderInterface({
         const x = (e.clientX-rect.left)
         const rounded = rect.width*Math.floor(x*128/rect.width)/128;
         const coords = {trounded:rounded/pxPerSecond, t:x/pxPerSecond}
-        setIsDragging(true);
         setMouseDragStart(coords);
         setMouseDragEnd(null);
-    };
 
-    const handleCanvasMouseMove = (e) => {
-        if(isDragging){
+        const handleCanvasMouseMove = (e) => {
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
+            let mousedragstart;
+            setMouseDragStart(prev=>{
+                mousedragstart = prev;
+                return prev
+            })
             //if mouse has been dragged 5 pixels or less, doesn't count as a playback region
-            if(Math.abs(mouseDragStart.t*pxPerSecond-x)>5){
+            if(Math.abs(mousedragstart.t*pxPerSecond-x)>5){
                 setMouseDragEnd({t:x/pxPerSecond,trounded:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond});
             }
+            
         }
-    }
-
-    const handleCanvasMouseUp = (e) => {
-        if (!isDragging) return;
-        const rect = waveformRef.current.getBoundingClientRect();
-        const x = e.clientX-rect.left
-        if(Math.abs(mouseDragStart.t*pxPerSecond-x)<=5){
-            setPlayheadLocation(mouseDragStart.t)
-            setMouseDragEnd(null);
-            if(!isDemo){
-                socket.current.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd:null,roomID})
-            }
-        }else{
-            const start = rect.width*Math.ceil(x*128/rect.width)/128
-            const pos = {trounded:start/pxPerSecond, t:x/pxPerSecond}
-            if(x/pxPerSecond>=mouseDragStart.t){
-                if(snapToGrid){
-                    setPlayheadLocation(mouseDragStart.trounded)
-                }else{
-                    setPlayheadLocation(mouseDragStart.t)
+        const handleCanvasMouseUp = (e) => {
+            const rect = waveformRef.current.getBoundingClientRect();
+            const x = e.clientX-rect.left
+            let mousedragstart,mousedragend;
+            setMouseDragStart(prev=>{
+                mousedragstart = prev;
+                return prev
+            })
+            setMouseDragEnd(prev=>{
+                mousedragend = prev;
+                return prev
+            })
+            if(Math.abs(mousedragstart.t*pxPerSecond-x)<=5){
+                setPlayheadLocation(mousedragstart.t)
+                setMouseDragEnd(null);
+                if(!isDemo){
+                    socket.current.emit("send_play_window_to_server",{mouseDragStart:mousedragstart,mouseDragEnd:null,roomID})
                 }
-                setMouseDragEnd(pos);
-                socket.current.emit("send_play_window_to_server",{mouseDragStart,mouseDragEnd:pos,roomID})
             }else{
-                const xrounded = rect.width*Math.floor(x*128/rect.width)/128
-                if(snapToGrid){
-                    setPlayheadLocation(xrounded/pxPerSecond)
+                const endrounded = rect.width*Math.ceil(x*128/rect.width)/128
+                const pos = {trounded:endrounded/pxPerSecond, t:x/pxPerSecond}
+                //check if region has been dragged forwards or backwards. Always put start at the left
+                if(x/pxPerSecond>=mousedragstart.t){
+                    if(snapToGrid){
+                        setPlayheadLocation(mousedragstart.trounded)
+                    }else{
+                        setPlayheadLocation(mousedragstart.t)
+                    }
+                    setMouseDragEnd(pos);
+                    
                 }else{
-                    setPlayheadLocation(x/pxPerSecond)
+                    const xrounded = rect.width*Math.floor(x*128/rect.width)/128
+                    if(snapToGrid){
+                        setPlayheadLocation(xrounded/pxPerSecond)
+                    }else{
+                        setPlayheadLocation(x/pxPerSecond)
+                    }
+                    setMouseDragStart({trounded:xrounded/pxPerSecond,t:x/pxPerSecond})
+                    setMouseDragEnd(mousedragstart)
                 }
-                setMouseDragStart({trounded:xrounded/pxPerSecond,t:x/pxPerSecond})
-                setMouseDragEnd(mouseDragStart)
+                if(!isDemo){
+                    socket.current.emit("send_play_window_to_server",{mouseDragStart:mousedragstart,mouseDragEnd:pos,roomID})
+                }
             }
-        }    
-        setIsDragging(false);
+            window.removeEventListener("mousemove",handleCanvasMouseMove)
+            window.removeEventListener("mouseup",handleCanvasMouseUp)    
+        };
+        window.addEventListener('mousemove',handleCanvasMouseMove)
+        window.addEventListener('mouseup',handleCanvasMouseUp)
     };
+
+    
+
+
 
     const handleMovePlayhead = (e) => {
         const rect = scrollWindowRef.current.getBoundingClientRect()
@@ -272,8 +294,6 @@ export default function RecorderInterface({
                     height={35}
                     ref={measureTickRef}
                     onMouseDown={handleCanvasMouseDown}
-                    onMouseUp={handleCanvasMouseUp}
-                    onMouseMove={handleCanvasMouseMove}
                 >
                     
                 </canvas>
@@ -293,8 +313,6 @@ export default function RecorderInterface({
                 style={{width:Math.floor(1000*zoomFactor),imageRendering:"pixelated",height:"115px"}} 
                 className={`row-start-2 col-start-2`}
                 onMouseDown={handleCanvasMouseDown}
-                onMouseUp={handleCanvasMouseUp}
-                onMouseMove={handleCanvasMouseMove}
                 >
                 </canvas>
                 {/*<div style={{width:}} className="h-40 row-start-2 col-start-2 bg-amber-300 opacity-30">
