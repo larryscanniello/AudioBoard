@@ -65,7 +65,7 @@ export default function AudioBoard({isDemo}){
                                             setMouseDragStart,
                                             setMouseDragEnd,playheadRef,setDelayCompensation,
                                             metronomeOn,waveformRef,BPM,scrollWindowRef,
-                                            currentlyRecording,setPlayheadLocation})
+                                            currentlyRecording,setPlayheadLocation,isDemo})
     
 
     useEffect(() => {

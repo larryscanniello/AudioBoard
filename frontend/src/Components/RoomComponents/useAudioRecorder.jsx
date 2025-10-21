@@ -6,7 +6,7 @@ export const useAudioRecorder = (
   setAudioChunks,setAudioURL,setDelayCompensation, setDelayCompensationAudio, 
   onDelayCompensationComplete, setMouseDragStart, setMouseDragEnd,    
   playheadRef,metronomeOn,waveformRef,BPM,scrollWindowRef,currentlyRecording,
-  setPlayheadLocation
+  setPlayheadLocation,isDemo
 }
 ) => {
   const mediaRecorderRef = useRef(null);
@@ -46,14 +46,16 @@ export const useAudioRecorder = (
         mediaRecorder.onstop = async (e) => {
           console.log("recorder stopped");
           // Send chunks to server
-          for (let i = 0; i < chunks.length; i++) {
-            socket.current.emit("send_audio_client_to_server", {
-              audio: chunks[i],
-              roomID,
-              i,
-              user: "all",
-              length: chunks.length
-            });
+          if(!isDemo){
+            for (let i = 0; i < chunks.length; i++) {
+              socket.current.emit("send_audio_client_to_server", {
+                audio: chunks[i],
+                roomID,
+                i,
+                user: "all",
+                length: chunks.length
+              });
+            }
           }
 
           const blob = new Blob(chunks, { type: "audio/webm; codecs=opus" });
