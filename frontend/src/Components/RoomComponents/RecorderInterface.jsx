@@ -6,10 +6,9 @@ export default function RecorderInterface({
     waveformRef,playheadRef,isDragging,setMouseDragStart,
     setMouseDragEnd,socket,roomID,scrollWindowRef,
     playheadLocation,setPlayheadLocation,snapToGrid,
-    currentlyPlayingAudio,setSnapToGrid
+    currentlyPlayingAudio
 }){
 
-    const [movingPlayhead,setMovingPlayhead] = useState(false);
     const canvasContainerRef = useRef(null);
 
     const pxPerSecond = Math.floor(1000*zoomFactor)/(128*60/BPM)
@@ -17,6 +16,7 @@ export default function RecorderInterface({
 
     useEffect(()=>{
         if(canvasContainerRef.current){
+            //draws the canvas background
             const canvas = canvasContainerRef.current;
             const canvasContainerCtx = canvasContainerRef.current.getContext("2d");
             const WIDTH = canvas.width;
@@ -25,12 +25,11 @@ export default function RecorderInterface({
             canvasContainerCtx.fillStyle = "rgb(200,200,200)"
             canvasContainerCtx.fillRect(0,0,WIDTH,HEIGHT);
             const drawBeats = () => {
+                //draws the lower canvas beat lines
                 canvasContainerCtx.lineWidth = 1;
                 canvasContainerCtx.strokeStyle = "rgb(250,250,250)";
                 canvasContainerCtx.beginPath();
                 canvasContainerCtx.globalAlpha = 1
-                //const sliceWidth = (WIDTH * 1.0) / 128.0;
-                //const samplesPerBeat = Math.floor(48000/(BPM/60))
                 const sliceWidth =  WIDTH / 128;  // Space between each of the 128 lines
                 let audioLength, bufferLength;
                 if(audio){
@@ -41,10 +40,12 @@ export default function RecorderInterface({
                 for(let i = 0; i <= 128; i++) {
                     if(audio){
                         if(i/128<bufferLength/audioLength){
+                            //temporarily defunct, omits beat lines where waveform is
                             //continue
                         }
                     }
                     if(zoomFactor<8){
+                        //if zoomed in far enough, only show beat line every measure
                         if(i%4>=1){
                             continue
                         }
@@ -59,6 +60,7 @@ export default function RecorderInterface({
 
         }
         if(measureTickRef.current){
+            //draws the upper measure ticks and numbers
             const tickref = measureTickRef.current
             const tickCtx = tickref.getContext("2d");
             const WIDTH = tickref.width;
@@ -79,7 +81,7 @@ export default function RecorderInterface({
             tickCtx.strokeStyle = "rgb(250,250,250)"
             tickCtx.lineWidth = 1;
             tickCtx.font = "12px sans-serif";
-            tickCtx.fillStyle = "#1a1a1a"; // or whatever your tick color scheme is
+            tickCtx.fillStyle = "#1a1a1a";
             for(let i=1;i<=128;i++){
                 tickCtx.moveTo(i*sliceWidth,HEIGHT);
                 if(i%4==0){
@@ -93,6 +95,7 @@ export default function RecorderInterface({
             tickCtx.stroke();
         }
         if(waveformRef.current){
+            //draws the actual waveforms
             const canvasCtx = waveformRef.current.getContext("2d");
             const WIDTH = waveformRef.current.width;
             const HEIGHT = waveformRef.current.height;
@@ -119,12 +122,13 @@ export default function RecorderInterface({
                     canvasCtx.lineCap = "round";
                     canvasCtx.lineJoin = "round";
                     
-                    const sliceWidth = (WIDTH/128.0)/(audioCtxRef.current.sampleRate*(60/BPM));
+                    //const sliceWidth = (WIDTH/128.0)/(audioCtxRef.current.sampleRate*(60/BPM));
                     const scaleFactor = (bufferLength-delayCompensation)/(audioCtxRef.current.sampleRate*128*(60/BPM));
                     const samplesPerPixel = Math.ceil((bufferLength-delayCompensation) / (WIDTH*scaleFactor));
                     const delay = delayCompensation*WIDTH/bufferLength
                     canvasCtx.beginPath();
                     let lastx;
+                    //algorithm: each pixel gets min/max of a range of samples
                     for (let x = 0; x < WIDTH; x++) {
                         const start = x * samplesPerPixel + delayCompensation;
                         const end = Math.min(start + samplesPerPixel, bufferLength);
@@ -162,8 +166,8 @@ export default function RecorderInterface({
         if(currentlyPlayingAudio.current) return;
         const rect = waveformRef.current.getBoundingClientRect();
         const x = (e.clientX-rect.left)
-        const start = rect.width*Math.floor(x*128/rect.width)/128;
-        const coords = {trounded:start/pxPerSecond, t:x/pxPerSecond}
+        const rounded = rect.width*Math.floor(x*128/rect.width)/128;
+        const coords = {trounded:rounded/pxPerSecond, t:x/pxPerSecond}
         setIsDragging(true);
         setMouseDragStart(coords);
         setMouseDragEnd(null);
@@ -173,6 +177,7 @@ export default function RecorderInterface({
         if(isDragging){
             const rect = waveformRef.current.getBoundingClientRect();
             const x = e.clientX-rect.left
+            //if mouse has been dragged 5 pixels or less, doesn't count as a playback region
             if(Math.abs(mouseDragStart.t*pxPerSecond-x)>5){
                 setMouseDragEnd({t:x/pxPerSecond,trounded:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond});
             }

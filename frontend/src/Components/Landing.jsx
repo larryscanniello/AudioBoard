@@ -15,7 +15,7 @@ export default function Landing() {
           <h6 className="m-8 text-4xl">AudioBoard: A whiteboard for remote music lessons</h6>
         </div>
         <div className="p-4"> 
-          <AudioBoard/>
+          <AudioBoard isDemo={true}/>
         </div>
         
         <div className="w-full flex flex-col items-center">

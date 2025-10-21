@@ -22,61 +22,64 @@ import {
 import { FaMagnifyingGlass } from "react-icons/fa6";
 import blackbirdDemo from "/audio/BlackbirdAudioBoarddemo.wav"
 
-export default function AudioBoard(){
+export default function AudioBoard({isDemo}){
 
-    const playrecordingbuttonref = useRef(null);
     const [audioURL,setAudioURL] = useState(null);
     const [audio,setAudio] = useState(null);
-    const waveformRef = useRef(null);
     const [BPM,setBPM] = useState(120);
-    const [mouseDragStart,setMouseDragStart] = useState({trounded:2.25,t:2.25});
-    const [mouseDragEnd,setMouseDragEnd] = useState({trounded:13.5,t:13.5});
+    const [mouseDragStart,setMouseDragStart] = useState({trounded:2.25,t:2.25}); //time in seconds
+    const [mouseDragEnd,setMouseDragEnd] = useState({trounded:13.5,t:13.5}); //time in seconds
     const [isDragging,setIsDragging] = useState(null);
-    const audioObjectRef = useRef(null);
-    const { roomID } = useParams();
     const [roomResponse,setRoomResponse] = useState(null);
     const [audioChunks,setAudioChunks] = useState([]);
-    const playheadRef = useRef(null);
     const [zoomFactor,setZoomFactor] = useState(2);
-    const [delayCompensation,setDelayCompensation] = useState(0);
-    const delayCompensationSourceRef = useRef(null);
-    const measureTickRef = useRef(null);
-    const metronomeRef = useRef(null);
-    const delayCompensationRecordRef = useRef(null);
-    const delayCompensationPlayRef = useRef(null);
-    const [delayCompensationAudio,setDelayCompensationAudio] = useState(null);
+    const [delayCompensation,setDelayCompensation] = useState(0); //delayCompensation is in samples
     const [currentlyAdjustingLatency,setCurrentlyAdjustingLatency] = useState(null);
-    const playingAudioRef = useRef(null);
-    const currentlyPlayingAudio = useRef(false);
-    const socket = useRef(null);
-    const AudioCtxRef = useRef(null);
-    const handlePlayAudioRef = useRef(null);
     const [displayDelayCompensationMessage,setDisplayDelayCompensationMessage] = useState(false);
     const [metronomeOn,setMetronomeOn] = useState(true);
-    const scrollWindowRef = useRef(null);
-    const currentlyRecording = useRef(false);
     const [playheadLocation,setPlayheadLocation] = useState(2.25);
     const [snapToGrid,setSnapToGrid] = useState(true);
-    const [compactMode,setCompactMode] = useState(false);
-    
+
+    const waveformRef = useRef(null);
+    const playheadRef = useRef(null);
+    const delayCompensationSourceRef = useRef(null);
+    const measureTickRef = useRef(null);
+    const scrollWindowRef = useRef(null);
+
+    const handlePlayAudioRef = useRef(null);
+    const currentlyPlayingAudio = useRef(false); //this ref stores a bool depending on whether audio is playing
+    const currentlyRecording = useRef(false);
+    const playingAudioRef = useRef(null); //this ref stores an audio context source 
+
+    const metronomeRef = useRef(null);
+    const AudioCtxRef = useRef(null);
+
+    const socket = useRef(null);
+
+    const { roomID } = useParams();
+
     const {startRecording,
             stopRecording,
             startDelayCompensationRecording,
             isRecorderReady} = useAudioRecorder({AudioCtxRef,metronomeRef,socket,roomID,
                                             setAudio,setAudioURL,setAudioChunks,
-                                            setDelayCompensationAudio,setMouseDragStart,
+                                            setMouseDragStart,
                                             setMouseDragEnd,playheadRef,setDelayCompensation,
                                             metronomeOn,waveformRef,BPM,scrollWindowRef,
                                             currentlyRecording,setPlayheadLocation})
     
-    
 
     useEffect(() => {
+        //This effect runs only when component first mounts. 
+        //Inititializes audio context, metronome, demo stuff, sockets
         AudioCtxRef.current = new AudioContext;
         metronomeRef.current = new Metronome;
         metronomeRef.current.audioContext = AudioCtxRef.current;
-        const newSocket = io("http://localhost:3000", { withCredentials: true });
-        socket.current = newSocket;
+        let newSocket;
+        if(!isDemo){
+            newSocket = io(import.meta.env.VITE_BACKEND_URL, { withCredentials: true });
+            socket.current = newSocket;
+        }
         const analyser = AudioCtxRef.current.createAnalyser();
         analyser.minDecibels = -90;
         analyser.maxDecibels = -10;
@@ -87,7 +90,10 @@ export default function AudioBoard(){
             setAudio(decoded);
             setBPM(80);
         }
-        getDemo()
+        if(isDemo){
+            getDemo()
+        }
+        
         
 
         const processAudio = async (newchunks) => {
@@ -111,65 +117,67 @@ export default function AudioBoard(){
 
         window.addEventListener("keydown",handleEnterKey)
         
+        if(!isDemo){
+            socket.current.on("receive_audio_server_to_client", async (data) => {
+                if(data.i==0){
+                    setAudioChunks(()=>{
+                        if(data.length===1){
+                            processAudio([data.audio])
+                            setMouseDragStart({trounded:0,t:0});
+                            setMouseDragEnd(null);
+                            setPlayheadLocation(0);
+                        }
+                        return [data.audio]
+                    })
+                }else {
+                    setAudioChunks(prev => {
+                        if(data.i!=prev.length){
+                            return prev
+                        }
 
-        socket.current.on("receive_audio_server_to_client", async (data) => {
-            if(data.i==0){
-                setAudioChunks(()=>{
-                    if(data.length===1){
-                        processAudio([data.audio])
-                        setMouseDragStart({trounded:0,t:0});
-                        setMouseDragEnd(null);
-                        setPlayheadLocation(0);
-                    }
-                    return [data.audio]
-                })
-            }else {
-                setAudioChunks(prev => {
-                    if(data.i!=prev.length){
-                        return prev
-                    }
-
-                    const newchunks = [...prev, data.audio]
-                    
-                    if(data.length==newchunks.length){
-                        processAudio(newchunks);
-                        setMouseDragStart({trounded:0,t:0});
-                        setMouseDragEnd({trounded:0,t:0});
-                        setPlayheadLocation(0);
-                    }
-                    return newchunks
-                });
-            }
-        });
-        
-        socket.current.on("send_play_window_to_clients", (data)=>{
-            setMouseDragStart(data.mouseDragStart);
-            setMouseDragEnd(data.mouseDragEnd);
-            const start = data.mouseDragEnd ? data.mouseDragStart.trounded : data.mouseDragStart ? data.mouseDragStart.t : 0;
-            const pxPerSecond = Math.floor(1000*zoomFactor)/(128*60/BPM)
-            setPlayheadLocation(start/pxPerSecond)
-        })
-
-        socket.current.on("server_to_client_play_audio",(data)=>{
-            handlePlayAudioRef.current();
-        })
-        
-        socket.current.on("request_audio_server_to_client", (data) => {
-            setAudioChunks(currentChunks => {
-                if(currentChunks && currentChunks.length > 0){
-                    for(let i = 0; i < currentChunks.length; i++){
-                        socket.current.emit("send_audio_client_to_server", {
-                            audio: currentChunks[i],roomID,
-                            i,user: data.user,
-                            length: currentChunks.length
-                        });
-                    }
+                        const newchunks = [...prev, data.audio]
+                        
+                        if(data.length==newchunks.length){
+                            processAudio(newchunks);
+                            setMouseDragStart({trounded:0,t:0});
+                            setMouseDragEnd({trounded:0,t:0});
+                            setPlayheadLocation(0);
+                        }
+                        return newchunks
+                    });
                 }
-                return currentChunks;
             });
-        });
+            
+            socket.current.on("send_play_window_to_clients", (data)=>{
+                setMouseDragStart(data.mouseDragStart);
+                setMouseDragEnd(data.mouseDragEnd);
+                const start = data.mouseDragEnd ? data.mouseDragStart.trounded : data.mouseDragStart ? data.mouseDragStart.t : 0;
+                const pxPerSecond = Math.floor(1000*zoomFactor)/(128*60/BPM)
+                setPlayheadLocation(start/pxPerSecond)
+            })
+
+            socket.current.on("server_to_client_play_audio",(data)=>{
+                handlePlayAudioRef.current();
+            })
+            
+            socket.current.on("request_audio_server_to_client", (data) => {
+                setAudioChunks(currentChunks => {
+                    if(currentChunks && currentChunks.length > 0){
+                        for(let i = 0; i < currentChunks.length; i++){
+                            socket.current.emit("send_audio_client_to_server", {
+                                audio: currentChunks[i],roomID,
+                                i,user: data.user,
+                                length: currentChunks.length
+                            });
+                        }
+                    }
+                    return currentChunks;
+                });
+            });
+        }
+
         async function verifyRoom() {
-            const response = await fetch("http://localhost:3000/getroom/" + roomID, {
+            const response = await fetch(import.meta.env.VITE_BACKEND_URL+"/getroom/" + roomID, {
                 credentials: "include",
                 method: "GET",
             });
@@ -182,11 +190,15 @@ export default function AudioBoard(){
             }
         }
 
-        verifyRoom();
+        if(!isDemo){
+            verifyRoom();
+        }
 
 
         return ()=>{
-            socket.current.disconnect();
+            if(!isDemo){
+                socket.current.disconnect();
+            }
             AudioCtxRef.current?.close();
             window.removeEventListener("keydown",handleEnterKey)
         }
@@ -204,8 +216,10 @@ export default function AudioBoard(){
     }
 
     const handlePlayAudio = () => {
+        //This function handles the dirty work of playing audio correctly no matter where the playhead is
         if(!audio) return;
         const source = AudioCtxRef.current.createBufferSource();
+        //Need to create a copy of the audio to send to both ears
         const stereoBuffer = AudioCtxRef.current.createBuffer(2, audio.length, AudioCtxRef.current.sampleRate);
         stereoBuffer.getChannelData(0).set(audio.getChannelData(0));
         stereoBuffer.getChannelData(1).set(audio.getChannelData(0));
@@ -215,33 +229,49 @@ export default function AudioBoard(){
             currentlyPlayingAudio.current=false;
         }
         const rect = waveformRef.current.getBoundingClientRect();
+        //Pixels per second calculates the rate at which the playhead must move. Depends on BPM
+        //Divides full width of canvas by the total time in seconds 128 beats takes
         const pixelsPerSecond = rect.width/((60/BPM)*128)
+        //totalTime is is length of time if audio the length of entire canvas is played
         const totalTime = (128*60/BPM)
         const duration = source.buffer.length/AudioCtxRef.current.sampleRate;
+        //startTime, endTime are relative to the audio, not absolute times, in seconds
         let startTime = 0;
         let endTime = Math.min(duration,totalTime);
-        let timeToNextMeasure = 0;
+        let timeToNextMeasure = 0; //seconds
         if(mouseDragStart&&(!mouseDragEnd||!snapToGrid)){
+            //This if handles startTime if no region is selected and there is no snap to grid
+            //startTime is totalTime times (pixels so far)/(total pixels in canvas)
             startTime = totalTime * mouseDragStart.t*pixelsPerSecond/waveformRef.current.width;
+            //find the next beat so metronome is aligned
             const nextBeat = 128*mouseDragStart.t*pixelsPerSecond/waveformRef.current.width
             metronomeRef.current.currentBeatInBar = Math.ceil(nextBeat)%4
             const beatFractionToNextMeasure = Math.ceil(nextBeat)-nextBeat
             const secondsPerBeat = (60/BPM)
             timeToNextMeasure = beatFractionToNextMeasure * secondsPerBeat
         }else if(mouseDragStart&&mouseDragEnd&&snapToGrid){
+            //startTime is totalTime times (pixels so far)/(total pixels in canvas)
             startTime = totalTime * mouseDragStart.trounded*pixelsPerSecond/ waveformRef.current.width;
-            metronomeRef.current.currentBeatInBar = Math.floor(128*mouseDragStart.trounded*pixelsPerSecond/waveformRef.current.width)%4
+            const currBeat = 128*mouseDragStart.trounded*pixelsPerSecond/waveformRef.current.width
+            //this assumes that we are snapping to grid, so we use floor instead of ceil here
+            //so that the first beat of selected region plays
+            metronomeRef.current.currentBeatInBar = Math.floor(currBeat)%4
         }
         if(mouseDragEnd&&!snapToGrid){
             endTime = totalTime * Math.min(1,mouseDragEnd.t*pixelsPerSecond/ waveformRef.current.width);
         }else if(mouseDragEnd&&snapToGrid){
             endTime = totalTime * Math.min(1,mouseDragEnd.trounded*pixelsPerSecond/ waveformRef.current.width);
         }
-        let now = AudioCtxRef.current.currentTime;
+        //add .05 to match the delay of audio/metronome (metronome needs delay for first beat to sound)
+        let now = AudioCtxRef.current.currentTime+.05;
+        //updatePlayhead uses requestAnimationFrame to animate the playhead
+        //note we need the start parameter to keep track of where in the audio we are starting
+        //as opposed to now which is the current time absolutely
         const updatePlayhead = (start) => {
             const elapsed = AudioCtxRef.current.currentTime - now;
             setPlayheadLocation(start+elapsed);
             const x = (start+elapsed) * pixelsPerSecond;
+            //auto scroll right if playhead moves far right enough
             const visibleStart = scrollWindowRef.current.scrollLeft
             const visibleEnd = visibleStart + 1000
             if((x-visibleStart)/(visibleEnd-visibleStart)>(10/11)){
@@ -250,18 +280,21 @@ export default function AudioBoard(){
             if(start+elapsed<endTime&&currentlyPlayingAudio.current){
                 requestAnimationFrame(()=>{updatePlayhead(start)});
             }else if(!mouseDragEnd){
+                //if no region has been dragged, and end is reached, reset playhead to the beginning
                 metronomeRef.current.stop();
                 setMouseDragStart({trounded:0,t:0})
                 setMouseDragEnd(null)
                 setPlayheadLocation(0)
             }else{
+                //if a region has been dragged, reset playhead to 
                 metronomeRef.current.stop();
                 setPlayheadLocation(start)
             }
             
         }
-        const secondsToDelay = delayCompensation/AudioCtxRef.current.sampleRate
+        const secondsToDelay = delayCompensation/AudioCtxRef.current.sampleRate //convert delayComp in samples to seconds
         if(startTime+secondsToDelay>=audio.getChannelData(0).length/AudioCtxRef.current.sampleRate){
+            //if someone tries to play audio after the end of the audio, play audio from the beginning
             startTime = 0;
             endTime = duration;
             timeToNextMeasure = 0;
@@ -270,41 +303,18 @@ export default function AudioBoard(){
             start = 0;
         }
         if(metronomeOn){
+            //metronome has .05 second delay built into it
             metronomeRef.current.start(now+timeToNextMeasure);
         }
+        //source.start arguments are (time to wait to play audio,location in audio to start,duration to play)
         source.start(AudioCtxRef.current.currentTime+.05,startTime+secondsToDelay,endTime-startTime)
         playingAudioRef.current = source;
         currentlyPlayingAudio.current = true;
         updatePlayhead(startTime)
     }
 
-    const SetDelayCompensation = () => {
-        if(!currentlyAdjustingLatency){
-        }else{
-            delayCompensationSourceRef.current.stop();
-            metronomeRef.current.stop();
-        }
-        setCurrentlyAdjustingLatency(prev=>!prev)
-    }
-
-    /*if(currentlyAdjustingLatency){
-        if(delayCompensationSourceRef.current){
-            delayCompensationSourceRef.current.stop();
-        }
-        if(metronomeRef.current){
-            metronomeRef.current.stop();
-        }
-        const source = AudioCtxRef.current.createBufferSource();
-        source.buffer = delayCompensationAudio;
-        source.connect(AudioCtxRef.current.destination);
-        const start = AudioCtxRef.current.currentTime;
-        source.start(0,delayCompensation/AudioCtxRef.current.sampleRate);
-        metronomeRef.current.start();
-        delayCompensationSourceRef.current = source;
-    }*/
-        
-
     const handleTempoMouseDown = (e) => {
+        //handles the BPM adjuster
         if(currentlyPlayingAudio.current||currentlyRecording.current){
             return
         }
@@ -342,8 +352,6 @@ export default function AudioBoard(){
         }
     }
 
-
-
     return <div className="">
         <div className="w-full grid place-items-center items-center">
             <div className="grid grid-rows-[1px_172px] h-58 bg-gray-700 border-gray-500 border-4 rounded-2xl shadow-gray shadow-md"
@@ -375,7 +383,9 @@ export default function AudioBoard(){
                             onClick={()=>{
                                 if(!currentlyPlayingAudio.current&&!currentlyRecording.current){
                                     handlePlayAudio();
-                                    socket.current.emit("client_to_server_play_audio",{roomID})
+                                    if(!isDemo){
+                                        socket.current.emit("client_to_server_play_audio",{roomID})
+                                    }
                                 }    
                                 }}>
                             <Play color={"lightgreen"} style={{width:20,height:20}}/> 
@@ -477,6 +487,5 @@ export default function AudioBoard(){
                 </div>
             </div>
         </div>
-        
-         </div>
+        </div>
 }
