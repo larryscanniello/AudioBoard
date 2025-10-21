@@ -33,7 +33,9 @@ export default function Landing() {
         <div className="w-full flex flex-col items-center mt-10 text-xl">
           <div className="text-3xl mb-2">Join a room:</div>
             <a className="pt-2 pb-2 pl-8 pr-8 rounded-3xl bg-indigo-300 hover:bg-indigo-400 flex flex-row"
-              onClick={()=>setShowUnderConstruction(true)}>
+              onClick={()=>{setShowUnderConstruction(true)
+                console.log('check1234')
+              }}>
                 <div>Log in with</div> 
                 <FcGoogle style={{transform:"scale(1.2)",marginTop:"2.5px",marginLeft:"8px"}}/>
             </a>
