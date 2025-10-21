@@ -466,7 +466,8 @@ export default function AudioBoard({isDemo}){
                                     <Circle color={"red"}className="" style={{width:20,height:20}}/>
                                 </Button>
                             </div>
-                            {displayDelayCompensationMessage && <div className="text-green-600">Latency compensated successfully.</div>}
+                            {displayDelayCompensationMessage && <div className="text-green-600">
+                                Latency compensatation attempted successfully.</div>}
                             <div className="pt-4">Alternatively, adjust it manually:
                                 <Slider style={{width:100}} max={10000} step={1}
                                     onValueChange={(value)=>setDelayCompensation(value)} className="p-4"
