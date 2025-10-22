@@ -110,6 +110,7 @@ export default function AudioBoard({isDemo,socket}){
         
         if(!isDemo){
             socket.current.on("receive_audio_server_to_client", async (data) => {
+                console.log(data)
                 if(data.i==0){
                     setAudioChunks(()=>{
                         if(data.length===1){
@@ -137,6 +138,8 @@ export default function AudioBoard({isDemo,socket}){
                         return newchunks
                     });
                 }
+                console.log('ddc',data.delayCompensation)
+                setDelayCompensation(data.delayCompensation)
             });
             
             socket.current.on("send_play_window_to_clients", (data)=>{
@@ -158,7 +161,8 @@ export default function AudioBoard({isDemo,socket}){
                             socket.current.emit("send_audio_client_to_server", {
                                 audio: currentChunks[i],roomID,
                                 i,user: data.user,
-                                length: currentChunks.length
+                                length: currentChunks.length,
+                                delayCompensation,
                             });
                         }
                     }
@@ -463,7 +467,7 @@ export default function AudioBoard({isDemo,socket}){
                             <div className="pt-4">Alternatively, adjust it manually:
                                 <Slider style={{width:100}} max={20000} step={delayCompensationStep}
                                     onValueChange={(value)=>setDelayCompensation(value)} className="p-4"
-                                    value={[delayCompensation]}
+                                    value={delayCompensation}
                                     > 
 
                                 </Slider>

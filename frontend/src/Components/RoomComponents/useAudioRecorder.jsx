@@ -57,7 +57,8 @@ export const useAudioRecorder = (
                 roomID,
                 i,
                 user: "all",
-                length: chunks.length
+                length: chunks.length,
+                delayCompensation
               });
             }
           }
@@ -122,7 +123,7 @@ export const useAudioRecorder = (
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, [AudioCtxRef.current, roomID, socket, onDelayCompensationComplete]);
+  }, [AudioCtxRef.current, roomID, socket, delayCompensation]);
 
   const startRecording = () => {
     if(mediaRecorderRef.current){

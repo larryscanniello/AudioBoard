@@ -184,16 +184,25 @@ export default function RecorderInterface({
             const x = e.clientX-rect.left
             const mousedragstart = mouseDragStartRef.current;
             //if mouse has been dragged 5 pixels or less, doesn't count as a playback region
-            if(Math.abs(mousedragstart.t*pxPerSecond-x)>5){
-                const mousedragend = {t:x/pxPerSecond,trounded:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond}
+            if(x<0){
+                const mousedragend = {t:0,trounded:0};
                 setMouseDragEnd(mousedragend);
                 mouseDragEndRef.current = mousedragend;
-            }
+            }else if(x>rect.width){
+                const mousedragend = {t:rect.width,trounded:rect.width};
+                setMouseDragEnd(mousedragend);
+                mouseDragEndRef.current = mousedragend;
+            }else if(Math.abs(mousedragstart.t*pxPerSecond-x)>5){
+                    const mousedragend = {t:x/pxPerSecond,trounded:rect.width*Math.ceil(x*128/rect.width)/128/pxPerSecond}
+                    setMouseDragEnd(mousedragend);
+                    mouseDragEndRef.current = mousedragend;
+                }
+            
         }
         const handleCanvasMouseUp = (e) => {
             isDraggingPlaybackRegion.current = false;
             const rect = waveformRef.current.getBoundingClientRect();
-            const x = e.clientX-rect.left
+            const x = Math.max(0,Math.min(rect.width,e.clientX-rect.left))
             const mousedragstart = mouseDragStartRef.current;
             const mousedragend = mouseDragEndRef.current;
             if(Math.abs(mousedragstart.t*pxPerSecond-x)<=5){
@@ -213,7 +222,6 @@ export default function RecorderInterface({
                         setPlayheadLocation(mousedragstart.t)
                     }
                     setMouseDragEnd(pos);
-                    
                 }else{
                     const xrounded = rect.width*Math.floor(x*128/rect.width)/128
                     if(snapToGrid){

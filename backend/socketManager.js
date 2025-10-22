@@ -43,9 +43,9 @@ const socketManager = async (server,sessionMiddleware) => {
 
     socket.on("send_audio_client_to_server",(data)=>{
       if(data.user==="all"){
-        socket.to(data.roomID).emit("receive_audio_server_to_client",{audio:data.audio,i:data.i,length:data.length})
+        socket.to(data.roomID).emit("receive_audio_server_to_client",data)
       }else{
-        socket.to(data.roomID).emit("receive_audio_server_to_client",{audio:data.audio,i:data.i,length:data.length})
+        socket.to(data.roomID).emit("receive_audio_server_to_client",data)
       }
     })
 
