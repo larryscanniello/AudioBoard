@@ -11,7 +11,10 @@ const { validate: isUUID } = require("uuid");
 const http = require('http');
 const socketManager = require('./socketManager');
 
+
+
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const sessionMiddleware = session({
   store: new pgSession({
