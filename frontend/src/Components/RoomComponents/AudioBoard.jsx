@@ -62,7 +62,7 @@ export default function AudioBoard({isDemo,socket}){
                                             setMouseDragStart,
                                             setMouseDragEnd,playheadRef,setDelayCompensation,
                                             metronomeOn,waveformRef,BPM,scrollWindowRef,
-                                            currentlyRecording,setPlayheadLocation,isDemo})
+                                            currentlyRecording,setPlayheadLocation,isDemo,delayCompensation})
     
 
     useEffect(() => {

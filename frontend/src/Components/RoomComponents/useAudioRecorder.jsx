@@ -6,7 +6,7 @@ export const useAudioRecorder = (
   setAudioChunks,setAudioURL,setDelayCompensation, setDelayCompensationAudio, 
   onDelayCompensationComplete, setMouseDragStart, setMouseDragEnd,    
   playheadRef,metronomeOn,waveformRef,BPM,scrollWindowRef,currentlyRecording,
-  setPlayheadLocation,isDemo
+  setPlayheadLocation,isDemo,delayCompensation
 }
 ) => {
   const mediaRecorderRef = useRef(null);
@@ -99,7 +99,6 @@ export const useAudioRecorder = (
                 if(avg>greatestAvg){
                     greatestAvg = avg;
                     greatestIndex = i
-                    console.log('greatest',i)
                 }
             }
             setDelayCompensation(greatestIndex)
@@ -122,16 +121,22 @@ export const useAudioRecorder = (
   }, [AudioCtxRef.current, roomID, socket, onDelayCompensationComplete]);
 
   // Recording control functions
-  const startRecording = (metRef) => {
+  const startRecording = async (metRef) => {
     if (mediaRecorderRef.current && metRef.current) {
+        if (AudioCtxRef.current.state === "suspended") {
+          await AudioCtxRef.current.resume();
+        }
+
         currentlyRecording.current = true;
         
+        const now = AudioCtxRef.current.currentTime
+
         if(metronomeOn){
             metRef.current.currentBeatInBar = 0;
-            metRef.current.start();
+            metRef.current.start(now);
         }
         mediaRecorderRef.current.start();
-        const now = AudioCtxRef.current.currentTime
+        
         
         const updatePlayhead = () => {
                 const rect = waveformRef.current.getBoundingClientRect();
@@ -174,8 +179,9 @@ export const useAudioRecorder = (
   const startDelayCompensationRecording = (metRef) => {
     if (delayCompensationRecorderRef.current && metRef.current) {
       const prevtempo = metRef.current.tempo;
+      const now = AudioCtxRef.current.currentTime;
       metRef.current.tempo = 120;
-      metRef.current.start();
+      metRef.current.start(now);
       delayCompensationRecorderRef.current.start();
       console.log("Delay compensation recording started");
       setTimeout(() => {

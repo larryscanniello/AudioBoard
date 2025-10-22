@@ -76,7 +76,7 @@ export default class Metronome
             this.nextNoteTime = startTime+.05;
         }
         
-
+        console.log('beatinbar',this.currentBeatInBar)
         this.intervalID = setInterval(() => this.scheduler(), this.lookahead);
     }
 
