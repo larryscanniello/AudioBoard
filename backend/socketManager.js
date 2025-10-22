@@ -59,9 +59,12 @@ const socketManager = async (server,sessionMiddleware) => {
       
     });
 
+    socket.on("stop_audio_client_to_server",(roomID)=>{
+      socket.to(roomID).emit("stop_audio_server_to_client")
+    })
+
     socket.on("send_play_window_to_server",(data)=>{
       socket.to(data.roomID).emit("send_play_window_to_clients",data)
-      console.log('check-151')
     })
 
     socket.on("receive_bpm_client_to_server", (data)=> {
@@ -69,7 +72,6 @@ const socketManager = async (server,sessionMiddleware) => {
     })
 
     socket.on("disconnect",()=>{
-      console.log('check410')
       for(let i=0;i<userList.length;i++){
         if(userList[i][1]===userID){
           userList.splice(i,1);

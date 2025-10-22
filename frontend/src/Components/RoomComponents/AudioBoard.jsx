@@ -26,7 +26,7 @@ export default function AudioBoard({isDemo,socket}){
     const [audioURL,setAudioURL] = useState(null);
     const [audio,setAudio] = useState(null);
     const [BPM,setBPM] = useState(120);
-    const [mouseDragStart,setMouseDragStart] = useState(isDemo ? {trounded:2.25,t:2.25} : null); //time in seconds
+    const [mouseDragStart,setMouseDragStart] = useState(isDemo ? {trounded:2.25,t:2.25} : {trounded:0,t:0}); //time in seconds
     const [mouseDragEnd,setMouseDragEnd] = useState(isDemo ? {trounded:13.5,t:13.5}: null); //time in seconds
     const [roomResponse,setRoomResponse] = useState(null);
     const [audioChunks,setAudioChunks] = useState([]);
@@ -97,16 +97,31 @@ export default function AudioBoard({isDemo,socket}){
             setAudio(decoded);
         }
 
-        const handleEnterKey = (e) => {
+        const handleKeyDown = (e) => {
+            e.preventDefault();
             if(e.key==="Enter"){
                 setMouseDragStart({trounded:0,t:0});
                 setMouseDragEnd(null);
                 setPlayheadLocation(0);
                 scrollWindowRef.current.scrollLeft = 0;
             }
+            if(e.key===" "){
+                if(currentlyRecording.current){
+                    stopRecording(metronomeRef)
+                }else if(currentlyPlayingAudio.current){
+                    console.log('check1')
+                    if(playingAudioRef.current){
+                        playingAudioRef.current.stop()
+                        socket.current.emit("stop_audio_client_to_server",roomID)
+                    }
+                }else{
+                    handlePlayAudioRef.current()
+                    socket.current.emit("client_to_server_play_audio",{roomID})
+                }
+            }
         }
 
-        window.addEventListener("keydown",handleEnterKey)
+        window.addEventListener("keydown",handleKeyDown)
         
         if(!isDemo){
             socket.current.on("receive_audio_server_to_client", async (data) => {
@@ -138,7 +153,6 @@ export default function AudioBoard({isDemo,socket}){
                         return newchunks
                     });
                 }
-                console.log('ddc',data.delayCompensation)
                 setDelayCompensation(data.delayCompensation)
             });
             
@@ -173,6 +187,14 @@ export default function AudioBoard({isDemo,socket}){
             socket.current.on("send_bpm_server_to_client",bpm=>{
                 setBPM(bpm);
             });
+
+            socket.current.on("stop_audio_server_to_client",()=>{
+                if(playingAudioRef.current){
+                    playingAudioRef.current.stop();
+                }
+                stopRecording(metronomeRef);
+                metronomeRef.current.stop();
+            })
         }
 
         
@@ -183,7 +205,7 @@ export default function AudioBoard({isDemo,socket}){
                 socket.current.disconnect();
             }
             AudioCtxRef.current?.close();
-            window.removeEventListener("keydown",handleEnterKey)
+            window.removeEventListener("keydown",handleKeyDown)
         }
 
         
@@ -387,11 +409,13 @@ export default function AudioBoard({isDemo,socket}){
                         <ButtonGroupSeparator/>
                         <Button variant="default" size="lg" className="hover:bg-gray-800"
                             onClick={()=>{
+                                    console.log('check3')
                                     if(playingAudioRef.current){
                                         playingAudioRef.current.stop();
                                     }
                                     stopRecording(metronomeRef);
                                     metronomeRef.current.stop();
+                                    socket.current.emit("stop_audio_client_to_server",roomID)
                                 }}>
                             <Square color={"lightblue"} className="" style={{width:20,height:20}}/>
                         </Button>
