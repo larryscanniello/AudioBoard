@@ -22,7 +22,9 @@ const sessionMiddleware = session({
   resave: true,
   saveUninitialized: true,
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24 * 365 // 1 year
+    maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === "production",
   }
 })
 socketManager(server,sessionMiddleware);
