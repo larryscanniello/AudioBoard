@@ -6,7 +6,6 @@ export default function Home(){
     const [goToRoomValue,setGoToRoomValue] = useState('');
     const [showExistingRoom,setShowExistingRoom] = useState(false);
 
-    console.log('check40')
     const auth = useContext(AuthContext);
       if (!auth) {
         throw new Error("Home must be used inside AuthProvider");

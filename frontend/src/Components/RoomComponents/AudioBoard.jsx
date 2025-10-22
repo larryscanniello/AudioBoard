@@ -435,7 +435,7 @@ export default function AudioBoard({isDemo,socket}){
                                     variant="default" size="lg" className="bg-white hover:bg-gray-300 border-1 border-gray-400"
                                     onClick={()=>{
                                         startDelayCompensationRecording(metronomeRef);
-                                        setTimeout(()=>setDisplayDelayCompensationMessage(true),300)
+                                        setTimeout(()=>setDisplayDelayCompensationMessage(true),1000)
                                     }}
                                     >
                                     <Circle color={"red"}className="" style={{width:20,height:20}}/>

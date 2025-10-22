@@ -33,7 +33,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: process.env.FRONTEND_URL,
   credentials: true
 }));
 
@@ -93,7 +93,7 @@ app.get("/", (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`Server is running`);
 });
 
 

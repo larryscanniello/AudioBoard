@@ -88,7 +88,6 @@ export const useAudioRecorder = (
             const blob = new Blob(delayChunks, { type: "audio/ogg; codecs=opus" });
             const arrayBuffer = await blob.arrayBuffer();
             const decoded = await AudioCtxRef.current.decodeAudioData(arrayBuffer);
-            setDelayCompensationAudio(decoded);
             let greatestAvg = 0;
             let greatestIndex = 0;
             const dataArray = decoded.getChannelData(0);
@@ -100,6 +99,7 @@ export const useAudioRecorder = (
                 if(avg>greatestAvg){
                     greatestAvg = avg;
                     greatestIndex = i
+                    console.log('greatest',i)
                 }
             }
             setDelayCompensation(greatestIndex)
@@ -179,9 +179,11 @@ export const useAudioRecorder = (
       console.log("Delay compensation recording started");
       setTimeout(() => {
         metronomeRef.current.stop();
-        delayCompensationRecorderRef.current.stop();
         metRef.current.tempo = prevtempo
       }, 400);
+      setTimeout(()=>{
+        delayCompensationRecorderRef.current.stop();
+      },1000)
     }
   }
 
