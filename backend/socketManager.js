@@ -1,9 +1,10 @@
 
 const { Server } = require("socket.io");
 const sharedSession = require("express-socket.io-session");
+const pool = require('./db')
 
 
-const socketManager = (server,sessionMiddleware) => {
+const socketManager = async (server,sessionMiddleware) => {
   const io = new Server(server, {
     cors: {
       origin: "http://localhost:5173", // Your client URL
@@ -12,39 +13,38 @@ const socketManager = (server,sessionMiddleware) => {
     }
   });
 
+  const userList = []
+
   io.use(sharedSession(sessionMiddleware,{
     autoSave: true,
   }));
 
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     let userID;
+    let roomIDglobal;
     if (socket.handshake.session.passport?.user) {
       userID = socket.handshake.session.passport.user;
       console.log("User ID:", userID);
+      
     } else {
       console.log("Unauthenticated socket");
     }
+    
     // Listen for a 'join_room' event
-    socket.on('join_room', (roomID) => {
+    socket.on('join_room', async (roomID) => {
       socket.join(roomID);
-      /*const allSockets = Array.from(io.sockets.sockets.values());
-      const others = allSockets.filter(s => s.id !== socket.id)
-      console.log('others',others)
-      if(others.length>0){
-        const randomSocket = others[0];
-        randomSocket.to(roomID).emit("request_audio_server_to_client",{user:userID})
-      }*/
+      roomIDglobal = roomID;
+      const data = await pool.query("SELECT * FROM USERS WHERE id = $1",[userID]);
+      userList.push([data.rows[0].username,userID])
+      io.to(roomID).emit("user_list_server_to_client",userList)
       socket.to(roomID).emit('request_audio_server_to_client',{user:userID});
       console.log(`User ${socket.handshake.session.passport.user} joined room: ${roomID}`);
     });
 
     socket.on("send_audio_client_to_server",(data)=>{
-      console.log('check3')
       if(data.user==="all"){
-        console.log('check2')
         socket.to(data.roomID).emit("receive_audio_server_to_client",{audio:data.audio,i:data.i,length:data.length})
       }else{
-        console.log('check1')
         socket.to(data.roomID).emit("receive_audio_server_to_client",{audio:data.audio,i:data.i,length:data.length})
       }
     })
@@ -63,6 +63,19 @@ const socketManager = (server,sessionMiddleware) => {
       socket.to(data.roomID).emit("send_play_window_to_clients",data)
       console.log('check-151')
     })
+
+    socket.on("disconnect",()=>{
+      console.log('check410')
+      for(let i=0;i<userList.length;i++){
+        if(userList[i][1]===userID){
+          userList.splice(i,1);
+          console.log(userList)
+          break
+        }
+      }
+      socket.to(roomIDglobal).emit("user_list_server_to_client",userList)
+    })
+
   });
 
   return io;

@@ -43,7 +43,7 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:3000/auth/google/callback"
+    callbackURL: process.env.BACKEND_URL+"/auth/google/callback"
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
@@ -164,11 +164,11 @@ app.get("/auth/google",
 
 // Google callback route
 app.get("/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login" }),
+  passport.authenticate("google", { failureRedirect: "/auth/google" }),
   (req, res) => {
     // At this point, user is authenticated
     // You can redirect to frontend with a token
-    res.redirect("http://localhost:5173/home"); // your React app
+    res.redirect(process.env.FRONTEND_URL+"/home");
   }
 );
 

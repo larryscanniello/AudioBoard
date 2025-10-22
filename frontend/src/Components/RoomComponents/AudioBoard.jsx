@@ -1,6 +1,5 @@
 import { useRef,useState,useEffect } from "react";
 import { useParams } from "react-router-dom";
-import io from "socket.io-client"
 import Metronome from "../../Classes/Metronome"
 import { useAudioRecorder } from "./useAudioRecorder";
 import RecorderInterface from "./RecorderInterface";
@@ -22,13 +21,13 @@ import {
 import { FaMagnifyingGlass } from "react-icons/fa6";
 import blackbirdDemo from "/audio/BlackbirdAudioBoarddemo.wav"
 
-export default function AudioBoard({isDemo}){
+export default function AudioBoard({isDemo,socket}){
 
     const [audioURL,setAudioURL] = useState(null);
     const [audio,setAudio] = useState(null);
     const [BPM,setBPM] = useState(120);
-    const [mouseDragStart,setMouseDragStart] = useState({trounded:2.25,t:2.25}); //time in seconds
-    const [mouseDragEnd,setMouseDragEnd] = useState({trounded:13.5,t:13.5}); //time in seconds
+    const [mouseDragStart,setMouseDragStart] = useState(isDemo ? {trounded:2.25,t:2.25} : null); //time in seconds
+    const [mouseDragEnd,setMouseDragEnd] = useState(isDemo ? {trounded:13.5,t:13.5}: null); //time in seconds
     const [roomResponse,setRoomResponse] = useState(null);
     const [audioChunks,setAudioChunks] = useState([]);
     const [zoomFactor,setZoomFactor] = useState(2);
@@ -36,7 +35,7 @@ export default function AudioBoard({isDemo}){
     const [currentlyAdjustingLatency,setCurrentlyAdjustingLatency] = useState(null);
     const [displayDelayCompensationMessage,setDisplayDelayCompensationMessage] = useState(false);
     const [metronomeOn,setMetronomeOn] = useState(true);
-    const [playheadLocation,setPlayheadLocation] = useState(2.25);
+    const [playheadLocation,setPlayheadLocation] = useState(isDemo ? 2.25 : 0);
     const [snapToGrid,setSnapToGrid] = useState(true);
 
     const waveformRef = useRef(null);
@@ -52,8 +51,6 @@ export default function AudioBoard({isDemo}){
 
     const metronomeRef = useRef(null);
     const AudioCtxRef = useRef(null);
-
-    const socket = useRef(null);
 
     const { roomID } = useParams();
 
@@ -74,11 +71,6 @@ export default function AudioBoard({isDemo}){
         AudioCtxRef.current = new AudioContext;
         metronomeRef.current = new Metronome;
         metronomeRef.current.audioContext = AudioCtxRef.current;
-        let newSocket;
-        if(!isDemo){
-            newSocket = io(import.meta.env.VITE_BACKEND_URL, { withCredentials: true });
-            socket.current = newSocket;
-        }
         const analyser = AudioCtxRef.current.createAnalyser();
         analyser.minDecibels = -90;
         analyser.maxDecibels = -10;
@@ -96,7 +88,6 @@ export default function AudioBoard({isDemo}){
         
 
         const processAudio = async (newchunks) => {
-            console.log('check04')
             const blob = new Blob(newchunks, { type: "audio/ogg; codecs=opus" });
             const audioURLtemp = window.URL.createObjectURL(blob);
             setAudioURL(audioURLtemp);
@@ -175,23 +166,7 @@ export default function AudioBoard({isDemo}){
             });
         }
 
-        async function verifyRoom() {
-            const response = await fetch(import.meta.env.VITE_BACKEND_URL+"/getroom/" + roomID, {
-                credentials: "include",
-                method: "GET",
-            });
-            if (response.ok) {
-                setRoomResponse(true);
-                socket.current.emit("join_room", roomID);
-                console.log(`Attempting to join socket room: ${roomID}`);
-            } else {
-                setRoomResponse(false);
-            }
-        }
-
-        if(!isDemo){
-            verifyRoom();
-        }
+        
 
 
         return ()=>{
@@ -451,7 +426,7 @@ export default function AudioBoard({isDemo}){
                     </div>
                     <Popover>
                         <PopoverTrigger className="col-start-4 hover:underline text-blue-200">Latency</PopoverTrigger>
-                        <PopoverContent onCloseAutoFocus={()=>setDisplayDelayCompensationMessage(false)} style={{transform:"translateY(-100%)"}}>
+                        <PopoverContent onCloseAutoFocus={()=>setDisplayDelayCompensationMessage(false)}>
                             <div>Place your microphone near your speakers,
                                 turn your volume up,
                             then hit the record button.</div>  
