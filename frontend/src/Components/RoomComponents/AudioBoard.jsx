@@ -31,7 +31,7 @@ export default function AudioBoard({isDemo,socket}){
     const [roomResponse,setRoomResponse] = useState(null);
     const [audioChunks,setAudioChunks] = useState([]);
     const [zoomFactor,setZoomFactor] = useState(2);
-    const [delayCompensation,setDelayCompensation] = useState(0); //delayCompensation is in samples
+    const [delayCompensation,setDelayCompensation] = useState([0]); //delayCompensation is in samples
     const [currentlyAdjustingLatency,setCurrentlyAdjustingLatency] = useState(null);
     const [displayDelayCompensationMessage,setDisplayDelayCompensationMessage] = useState(false);
     const [metronomeOn,setMetronomeOn] = useState(true);
@@ -48,6 +48,7 @@ export default function AudioBoard({isDemo,socket}){
     const currentlyPlayingAudio = useRef(false); //this ref stores a bool depending on whether audio is playing
     const currentlyRecording = useRef(false);
     const playingAudioRef = useRef(null); //this ref stores an audio context source 
+    const BPMRef = useRef(BPM);
 
     const metronomeRef = useRef(null);
     const AudioCtxRef = useRef(null);
@@ -59,7 +60,7 @@ export default function AudioBoard({isDemo,socket}){
             startDelayCompensationRecording,
             isRecorderReady} = useAudioRecorder({AudioCtxRef,metronomeRef,socket,roomID,
                                             setAudio,setAudioURL,setAudioChunks,
-                                            setMouseDragStart,
+                                            setMouseDragStart,BPMRef,
                                             setMouseDragEnd,playheadRef,setDelayCompensation,
                                             metronomeOn,waveformRef,BPM,scrollWindowRef,
                                             currentlyRecording,setPlayheadLocation,isDemo,delayCompensation})
@@ -163,6 +164,10 @@ export default function AudioBoard({isDemo,socket}){
                     }
                     return currentChunks;
                 });
+            })
+            
+            socket.current.on("send_bpm_server_to_client",bpm=>{
+                setBPM(bpm);
             });
         }
 
@@ -301,6 +306,7 @@ export default function AudioBoard({isDemo,socket}){
             setBPM(prev=>{
                 const newbpm = startBPM + Math.floor(deltaY)
                 if(30<=newbpm&&newbpm<=400){
+                    BPMRef.current = newbpm
                     return newbpm
                 }else{
                     return prev
@@ -309,6 +315,9 @@ export default function AudioBoard({isDemo,socket}){
         };
 
         const handleMouseUp = () => {
+            if(BPMRef.current){
+                socket.current.emit("receive_bpm_client_to_server",{roomID,BPM:BPMRef.current})
+            }
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mouseup", handleMouseUp);
         };
@@ -325,6 +334,14 @@ export default function AudioBoard({isDemo,socket}){
             setPlayheadLocation(0);
         }
     }
+
+    let delayCompensationStep;
+    if(AudioCtxRef.current){
+        delayCompensationStep = Math.floor(AudioCtxRef.current.sampleRate * .01);
+    }else{
+        delayCompensationStep = 410;
+    }
+    
 
     return <div className="">
         <div className="w-full grid place-items-center items-center">
@@ -444,10 +461,10 @@ export default function AudioBoard({isDemo,socket}){
                             {displayDelayCompensationMessage && <div className="text-green-600">
                                 Latency compensatation attempted successfully.</div>}
                             <div className="pt-4">Alternatively, adjust it manually:
-                                <Slider style={{width:100}} max={10000} step={1}
+                                <Slider style={{width:100}} max={20000} step={delayCompensationStep}
                                     onValueChange={(value)=>setDelayCompensation(value)} className="p-4"
                                     value={[delayCompensation]}
-                                    >
+                                    > 
 
                                 </Slider>
                             </div>

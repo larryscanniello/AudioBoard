@@ -64,6 +64,10 @@ const socketManager = async (server,sessionMiddleware) => {
       console.log('check-151')
     })
 
+    socket.on("receive_bpm_client_to_server", (data)=> {
+      socket.to(data.roomID).emit("send_bpm_server_to_client",data.BPM)
+    })
+
     socket.on("disconnect",()=>{
       console.log('check410')
       for(let i=0;i<userList.length;i++){

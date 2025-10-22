@@ -6,7 +6,7 @@ export const useAudioRecorder = (
   setAudioChunks,setAudioURL,setDelayCompensation, setDelayCompensationAudio, 
   onDelayCompensationComplete, setMouseDragStart, setMouseDragEnd,    
   playheadRef,metronomeOn,waveformRef,BPM,scrollWindowRef,currentlyRecording,
-  setPlayheadLocation,isDemo,delayCompensation
+  setPlayheadLocation,isDemo,delayCompensation,BPMRef
 }
 ) => {
   const mediaRecorderRef = useRef(null);
@@ -43,6 +43,10 @@ export const useAudioRecorder = (
           chunks.push(e.data);
         };
 
+        mediaRecorder.onstart = () => {
+          handleRecording(metronomeRef);
+        }
+
         mediaRecorder.onstop = async (e) => {
           console.log("recorder stopped");
           // Send chunks to server
@@ -60,7 +64,7 @@ export const useAudioRecorder = (
 
           const blob = new Blob(chunks, { type: "audio/webm; codecs=opus" });
           const webmArrayBuffer = await blob.arrayBuffer();
-          
+          console.log('blob',blob,'webmArrayBuffer',webmArrayBuffer);
           const decoded = await AudioCtxRef.current.decodeAudioData(webmArrayBuffer);
           setAudioChunks([...chunks]);
           setAudio(decoded);
@@ -101,7 +105,7 @@ export const useAudioRecorder = (
                     greatestIndex = i
                 }
             }
-            setDelayCompensation(greatestIndex)
+            setDelayCompensation([greatestIndex])
             delayChunks = [];
         };
 
@@ -120,8 +124,14 @@ export const useAudioRecorder = (
     };
   }, [AudioCtxRef.current, roomID, socket, onDelayCompensationComplete]);
 
+  const startRecording = () => {
+    if(mediaRecorderRef.current){
+      mediaRecorderRef.current.start()
+    }
+  }
+
   // Recording control functions
-  const startRecording = async (metRef) => {
+  const handleRecording = async (metRef) => {
     if (mediaRecorderRef.current && metRef.current) {
         if (AudioCtxRef.current.state === "suspended") {
           await AudioCtxRef.current.resume();
@@ -135,12 +145,11 @@ export const useAudioRecorder = (
             metRef.current.currentBeatInBar = 0;
             metRef.current.start(now);
         }
-        mediaRecorderRef.current.start();
         
         
         const updatePlayhead = () => {
                 const rect = waveformRef.current.getBoundingClientRect();
-                const pixelsPerSecond = rect.width/((60/BPM)*128)
+                const pixelsPerSecond = rect.width/((60/BPMRef.current)*128)
                 const waveformCtx = waveformRef.current.getContext("2d");
                 const elapsed = AudioCtxRef.current.currentTime - now;
                 setPlayheadLocation(elapsed);                

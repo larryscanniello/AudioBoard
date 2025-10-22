@@ -127,14 +127,14 @@ export default function RecorderInterface({
                     canvasCtx.lineJoin = "round";
                     
                     //const sliceWidth = (WIDTH/128.0)/(audioCtxRef.current.sampleRate*(60/BPM));
-                    const scaleFactor = (bufferLength-delayCompensation)/(audioCtxRef.current.sampleRate*128*(60/BPM));
-                    const samplesPerPixel = Math.ceil((bufferLength-delayCompensation) / (WIDTH*scaleFactor));
-                    const delay = delayCompensation*WIDTH/bufferLength
+                    const scaleFactor = (bufferLength)/(audioCtxRef.current.sampleRate*128*(60/BPM));
+                    const samplesPerPixel = Math.ceil((bufferLength) / (WIDTH*scaleFactor));
+                    const delay = delayCompensation[0]*WIDTH/bufferLength
                     canvasCtx.beginPath();
                     let lastx;
                     //algorithm: each pixel gets min/max of a range of samples
                     for (let x = 0; x < WIDTH; x++) {
-                        const start = x * samplesPerPixel + delayCompensation;
+                        const start = x * samplesPerPixel+delayCompensation[0]
                         const end = Math.min(start + samplesPerPixel, bufferLength);
                         let min = 1.0, max = -1.0;
                         for (let i = start; i < end; i++) {
