@@ -127,6 +127,7 @@ export const useAudioRecorder = (
         currentlyRecording.current = true;
         
         if(metronomeOn){
+            metRef.current.currentBeatInBar = 0;
             metRef.current.start();
         }
         mediaRecorderRef.current.start();
