@@ -7,7 +7,7 @@ export default function AuthProvider({ children }) {
   const [isAuthorized, setIsAuthorized] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:3000/me", { credentials: "include" })
+    fetch(import.meta.env.VITE_BACKEND_URL + "/me", { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         if (data.user) {
