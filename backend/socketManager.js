@@ -7,7 +7,7 @@ const pool = require('./db')
 const socketManager = async (server,sessionMiddleware) => {
   const io = new Server(server, {
     cors: {
-      origin: "http://localhost:5173", // Your client URL
+      origin: process.env.FRONTEND_URL, // Your client URL
       methods: ["GET", "POST"],
       credentials: true,
     }
