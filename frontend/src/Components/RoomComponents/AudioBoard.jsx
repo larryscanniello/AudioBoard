@@ -340,9 +340,10 @@ export default function AudioBoard({isDemo,socket}){
         };
 
         const handleMouseUp = () => {
-            if(BPMRef.current){
+            if(BPMRef.current&&!isDemo){
                 socket.current.emit("receive_bpm_client_to_server",{roomID,BPM:BPMRef.current})
             }
+            console.log('check876')
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mouseup", handleMouseUp);
         };
