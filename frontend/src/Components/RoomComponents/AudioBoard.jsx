@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/Components/ui/popover"
 import { FaMagnifyingGlass } from "react-icons/fa6";
-import blackbirdDemo from "/audio/BlackbirdAudioBoarddemo.wav"
+import blackbirdDemo from "/audio/BlackbirdAudioBoarddemo.mp3"
 
 export default function AudioBoard({isDemo,socket}){
 
@@ -108,14 +108,17 @@ export default function AudioBoard({isDemo,socket}){
                 if(currentlyRecording.current){
                     stopRecording(metronomeRef)
                 }else if(currentlyPlayingAudio.current){
-                    console.log('check1')
                     if(playingAudioRef.current){
                         playingAudioRef.current.stop()
-                        socket.current.emit("stop_audio_client_to_server",roomID)
+                        if(!isDemo){
+                            socket.current.emit("stop_audio_client_to_server",roomID)
+                        }
                     }
                 }else{
                     handlePlayAudioRef.current()
-                    socket.current.emit("client_to_server_play_audio",{roomID})
+                    if(!isDemo){
+                        socket.current.emit("client_to_server_play_audio",{roomID})
+                    }
                 }
             }
         }
@@ -343,7 +346,6 @@ export default function AudioBoard({isDemo,socket}){
             if(BPMRef.current&&!isDemo){
                 socket.current.emit("receive_bpm_client_to_server",{roomID,BPM:BPMRef.current})
             }
-            console.log('check876')
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mouseup", handleMouseUp);
         };
@@ -415,7 +417,9 @@ export default function AudioBoard({isDemo,socket}){
                                     }
                                     stopRecording(metronomeRef);
                                     metronomeRef.current.stop();
-                                    socket.current.emit("stop_audio_client_to_server",roomID)
+                                    if(!isDemo){
+                                        socket.current.emit("stop_audio_client_to_server",roomID)
+                                    }
                                 }}>
                             <Square color={"lightblue"} className="" style={{width:20,height:20}}/>
                         </Button>
