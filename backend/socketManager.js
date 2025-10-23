@@ -71,6 +71,10 @@ const socketManager = async (server,sessionMiddleware) => {
       socket.to(data.roomID).emit("send_bpm_server_to_client",data.BPM)
     })
 
+    socket.on("handle_skipback_client_to_server",(roomID)=>{
+      socket.to(roomID).emit("handle_skipback_server_to_client")
+    })
+
     socket.on("disconnect",()=>{
       for(let i=0;i<userList.length;i++){
         if(userList[i][1]===userID){

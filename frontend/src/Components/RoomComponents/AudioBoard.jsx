@@ -103,6 +103,11 @@ export default function AudioBoard({isDemo,socket}){
                 setMouseDragEnd(null);
                 setPlayheadLocation(0);
                 scrollWindowRef.current.scrollLeft = 0;
+                if(!isDemo){
+                    socket.current.emit("send_play_window_to_server",{
+                        mouseDragStart:{trounded:0,t:0},mouseDragEnd:null,snapToGrid,roomID
+                    })
+                }
             }
             if(e.key===" "){
                 if(currentlyRecording.current){
@@ -161,13 +166,25 @@ export default function AudioBoard({isDemo,socket}){
             socket.current.on("send_play_window_to_clients", (data)=>{
                 setMouseDragStart(data.mouseDragStart);
                 setMouseDragEnd(data.mouseDragEnd);
-                const start = data.mouseDragEnd ? data.mouseDragStart.trounded : data.mouseDragStart ? data.mouseDragStart.t : 0;
-                const pxPerSecond = Math.floor(1000*zoomFactor)/(128*60/BPM)
-                setPlayheadLocation(start/pxPerSecond)
+                let start;
+                if(data.snapToGrid){
+                    start = data.mouseDragStart.trounded
+                }else{
+                    start = data.mouseDragStart.t
+                }
+                //start = data.mouseDragEnd ? data.mouseDragStart.trounded : data.mouseDragStart ? data.mouseDragStart.t : 0;
+                setPlayheadLocation(start)
             })
 
             socket.current.on("server_to_client_play_audio",(data)=>{
                 handlePlayAudioRef.current();
+            })
+
+            socket.current.on("handle_skipback_server_to_client",()=>{
+                setMouseDragEnd(null);
+                setMouseDragStart({trounded:0,t:0});
+                scrollWindowRef.current.scrollLeft = 0;
+                setPlayheadLocation(0);
             })
             
             socket.current.on("request_audio_server_to_client", (data) => {
@@ -188,6 +205,7 @@ export default function AudioBoard({isDemo,socket}){
             
             socket.current.on("send_bpm_server_to_client",bpm=>{
                 setBPM(bpm);
+                BPMRef.current = bpm;
             });
 
             socket.current.on("stop_audio_server_to_client",()=>{
@@ -360,6 +378,7 @@ export default function AudioBoard({isDemo,socket}){
             setMouseDragStart({trounded:0,t:0});
             scrollWindowRef.current.scrollLeft = 0;
             setPlayheadLocation(0);
+            socket.current.emit("handle_skipback_client_to_server",roomID)
         }
     }
 
@@ -436,7 +455,9 @@ export default function AudioBoard({isDemo,socket}){
                         </Button>
                         <ButtonGroupSeparator/>
                         <Button variant="default" size="lg" className="hover:bg-gray-800"
-                            onClick={handleSkipBack}
+                            onClick={()=>{handleSkipBack();
+                                socket.current.emit("handle_skipback_client_to_server",roomID)
+                            }}
                             >
                             <SkipBack style={{width:20,height:20}} color="orange"/>
                         </Button>

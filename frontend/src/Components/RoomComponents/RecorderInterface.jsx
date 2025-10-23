@@ -209,7 +209,9 @@ export default function RecorderInterface({
                 setPlayheadLocation(mousedragstart.t)
                 setMouseDragEnd(null);
                 if(!isDemo){
-                    socket.current.emit("send_play_window_to_server",{mouseDragStart:mousedragstart,mouseDragEnd:null,roomID})
+                    socket.current.emit("send_play_window_to_server",{
+                        mouseDragStart:mousedragstart,mouseDragEnd:null,roomID,snapToGrid
+                    })
                 }
             }else{
                 const endrounded = rect.width*Math.ceil(x*128/rect.width)/128
@@ -233,7 +235,9 @@ export default function RecorderInterface({
                     setMouseDragEnd(mousedragstart)
                 }
                 if(!isDemo){
-                    socket.current.emit("send_play_window_to_server",{mouseDragStart:mousedragstart,mouseDragEnd:pos,roomID})
+                    socket.current.emit("send_play_window_to_server",{
+                        mouseDragStart:mousedragstart,mouseDragEnd:pos,roomID,snapToGrid
+                    })
                 }
             }
             window.removeEventListener("mousemove",handleCanvasMouseMove)
