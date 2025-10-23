@@ -25,7 +25,7 @@ export default function AudioBoard({isDemo,socket}){
 
     const [audioURL,setAudioURL] = useState(null);
     const [audio,setAudio] = useState(null);
-    const [BPM,setBPM] = useState(120);
+    const [BPM,setBPM] = useState(isDemo ? 80 : 120);
     const [mouseDragStart,setMouseDragStart] = useState(isDemo ? {trounded:2.25,t:2.25} : {trounded:0,t:0}); //time in seconds
     const [mouseDragEnd,setMouseDragEnd] = useState(isDemo ? {trounded:13.5,t:13.5}: null); //time in seconds
     const [roomResponse,setRoomResponse] = useState(null);
@@ -80,7 +80,6 @@ export default function AudioBoard({isDemo,socket}){
             const arrayBuffer = await response.arrayBuffer();
             const decoded = await AudioCtxRef.current.decodeAudioData(arrayBuffer)
             setAudio(decoded);
-            setBPM(80);
         }
         if(isDemo){
             getDemo()
